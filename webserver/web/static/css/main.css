@@ -1,0 +1,12 @@
+.profilepic {
+    border-radius: 0.25rem;
+}
+
+.dropdown-toggle::after {
+    display: none;
+}
+
+div.profile-sep {
+    display: inline-block;
+    margin: 10px 0;
+}

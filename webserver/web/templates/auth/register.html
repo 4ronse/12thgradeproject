@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %} Register {% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card mx-auto" style="max-width: 440px;">
+            <div class="card-header text-center">
+                <h3> Register </h3>
+            </div>
+            <div class="card-body">
+
+                <form name="register-form" onsubmit="return validateRegisterationForm()" class="needs-validation  "
+                    method="post" novalidate>
+                    <input type="hidden" name="profile_picture" value="/static/img/logo.svg">
+
+                    <div class="input-group my-2">
+                        <div class="input-group-prepend"></div>
+                        <div class="input-group-text"><i class="fas fa-signature"></i></div>
+                        <input type="text" class="form-control" name="name" placeholder="Full name"
+                            pattern="([a-zA-Z]{2,}\s[a-zA-Z]{1,}'?-?[a-zA-Z]{2,}\s?([a-zA-Z]{1,})?)$" required>
+                        <div class="invalid-feedback"> A valid full name is required! </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="input-group my-2">
+                        <div class="input-group-prepend"></div>
+                        <div class="input-group-text"><i class="far fa-envelope"></i></div>
+                        <input type="text" class="form-control" name="email" placeholder="E-Mail"
+                            pattern="[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$" required>
+                        <div class="invalid-feedback"> A valid E-Mail is required! </div>
+                    </div>
+
+                    <div class="input-group my-2">
+                        <div class="input-group-prepend"></div>
+                        <div class="input-group-text"><i class="fas fa-key"></i></div>
+                        <input type="password" class="form-control" name="password" placeholder="Password"
+                            pattern="[a-zA-Z0-9~!@#$%^&*()_+=\- ]{8,128}" required>
+                        <div class="invalid-feedback"> A valid password is required! The password should contain between
+                            8 to 128 characters from the following: (a-z, A-Z, 0-9, ~!@#$%^&*()_+-=) </div>
+                    </div>
+
+                    <div class="input-group mt-4" style="height: 50px;">
+                        <button class="btn btn-success w-100 h-100" type="submit">
+                            <span><i class="fas fa-user-plus"></i> Register</span>
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
