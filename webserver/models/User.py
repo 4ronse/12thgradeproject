@@ -21,6 +21,10 @@ class User(UserMixin, BaseUserRelatedModel):
         db.session.commit()
         return self.otp_secret
 
+    def remove_2fa(self):
+        self.otp_secret = None
+        db.session.commit()
+
     def get_totp_uri(self):
         return 'otpauth://totp/{project_name}:{username}?secret={otp_secret}&issuer={project_name}' \
             .format(project_name=Config.PROJECT_NAME, username=self.id, otp_secret=self.otp_secret)

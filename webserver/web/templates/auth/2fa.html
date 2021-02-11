@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %} 2FA {% endblock %}
+
+{% block headimports %}
+
+<script src="/static/js/2fa.js"></script>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card mx-auto" style="max-width: 440px;">
+            <div class="card-header text-center">
+                <h3> Second Factor-Authanticator </h3>
+            </div>
+            <div class="card-body">
+
+                <div class="row w-100 text-center">
+                    <h2> 2FA Status:
+                        <span style="color: {{ 'darkgreen' if current_user.has_2fa else 'darkred' }} !important">
+                            {{ 'Enabled' if current_user.has_2fa else 'Disabled' }}
+                        </span>
+                    </h2>
+                </div>
+
+                <hr>
+
+
+                <div class="row px-2">
+                    {% if not current_user.has_2fa %}
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal"
+                        data-bs-target="#enable2FAModal">
+                        Enable 2FA for my account
+                    </button>
+
+                    <div class="modal fade" id="enable2FAModal" tabindex="-1" aria-labelledby="enable2FAModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="enable2FAModalLabel">
+                                        Enable Two Factor-Authantication
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mx-auto" style="width: 15rem; height: 15rem;">
+                                        <img id="qrcodeimg" src="/static/img/logo.svg" class="w-100 h-100" alt="QR">
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <h4> How To: </h4>
+                                        <span>1. Download the Google Authanticator app</span> <br>
+                                        <span>2. Set the app up</span> <br>
+                                        <span>3. Click on the Plus</span> <br>
+                                        <span>4. Scan the QR code</span> <br>
+                                        <div class="d-flex"><span>5. Put the 6 key long token here: </span> <input
+                                                class="form-control mx-2 p-0" type="text" pattern="^[0-9]{6}$"
+                                                style="width: 10ch" name="token" id="tokeninput"></div>
+                                        <br>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                                        Cancel
+                                    </button>
+                                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal"
+                                        id="continueBtn" disabled>Continue</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-6">
+                        <button type="button" class="btn btn-outline-info" data-bs-toggle="modal"
+                            data-bs-target="#show2FAQRModal">
+                            Get 2FA (totp) token QR
+                        </button>
+                    </div>
+
+                    <div class="col-6">
+                        <button class="btn btn-outline-danger" data-toggle="modal" data-target="disable2famodal"
+                            onclick="document.location = '/remove2fa'">
+                            Disable 2FA for my account
+                        </button>
+                    </div>
+
+                    <div class="modal fade" id="show2FAQRModal" tabindex="-1" aria-labelledby="show2FAQRModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="show2FAQRModalLabel">
+                                        Enable Two Factor-Authantication
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mx-auto" style="width: 15rem; height: 15rem;">
+                                        <img src="/2faqr" class="w-100 h-100" alt="QR">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal"
+                                        id="continueBtn">Continue</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

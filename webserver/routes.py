@@ -195,9 +195,7 @@ def profile():
 @auth.route('/2fa')
 @login_required
 def two_factor_auth():
-    if current_user.otp_secret is None:
-        current_user.generate_otp_secret()
-    return redirect(url_for('auth.2faqr'))
+    return render_template('auth/2fa.html')
 
 @auth.route('/2faqr')
 @login_required
@@ -212,10 +210,24 @@ def two_factor_auth_qr():
         'Expires': '0'
     }
 
-@auth.route('/verify2fa/<token>')
+@auth.route('/enable2fa', methods=['GET'])
 @login_required
-def check_2fa(token):
-    return str(current_user.verify_totp(token))
+def enable_2fa():
+    if current_user.otp_secret is None:
+        current_user.generate_otp_secret()
+    return redirect(url_for('auth.two_factor_auth')), 200
+
+@auth.route('/remove2fa')
+@login_required
+def remove_2fa():
+    current_user.remove_2fa()
+    return redirect(url_for('auth.two_factor_auth'))
+
+@auth.route('/validatetotptoken', methods=['POST'])
+@login_required
+def check_2fa():
+    validity = current_user.verify_totp(request.get_data(as_text=True).strip())
+    return str(validity), 200 if validity else 204
 
 #################
 #               #
@@ -225,6 +237,8 @@ def check_2fa(token):
 @view.route('/')
 @view.route('/index')
 def index():
+    if current_user.is_authenticated and not current_user.has_2fa:
+        flash('You should enable 2FA in your profile settings :)', 'warn')
     return render_template('index.html')
 
 @view.route('/defaultprofilepicture')
