@@ -139,12 +139,53 @@ def register():
     else:
         return redirect(url_for('view.index'))
 
-@auth.route('/logout')
+@auth.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('view.index'))
 
+@auth.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    if request.method == 'GET':
+        return render_template('auth/profile.html')
+    elif request.method == 'POST':
+        email = request.form.get('email')
+        profile_picture = request.form.get('profilepic')
+        name = request.form.get('name')
+
+        errors = []
+
+        if not Validators.email(email):
+            errors.append('E-Mail is not valid!')
+
+        if not Validators.name(name):
+            errors.append('Name is not valid!')
+        
+
+        if errors:
+            for error in errors:
+                flash(error, 'error')
+            return render_template('auth/profile.html')
+
+        if current_user.email != email:
+            user = User.query.filter_by(email=email).first()
+            if user:
+                flash('User with email {} already exists'.format(email), 'error')
+                return redirect(url_for('auth.profile'))
+
+        current_user.name = name
+        current_user.email = email
+        current_user.profile_picture = profile_picture
+
+        db.session.commit()
+
+        flash(f'Successfully commited changes!', 'success')
+        return redirect(url_for('auth.profile'))
+    else:
+        return render_template('auth/profile.html')
+        
 
 #################
 #               #

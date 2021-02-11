@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %} Register {% endblock %}
+{% block title %} Profile {% endblock %}
 
 {% block content %}
 
@@ -8,7 +8,7 @@
     <div class="col-md-8">
         <div class="card mx-auto" style="max-width: 440px;">
             <div class="card-header text-center">
-                <h3> Register </h3>
+                <h3> Edit Profile </h3>
             </div>
             <div class="card-body">
 
@@ -19,7 +19,8 @@
                         <div class="input-group-prepend"></div>
                         <div class="input-group-text"><i class="fas fa-signature"></i></div>
                         <input type="text" class="form-control" name="name" placeholder="Full name"
-                            pattern="([a-zA-Z]{2,}\s[a-zA-Z]{1,}'?-?[a-zA-Z]{2,}\s?([a-zA-Z]{1,})?)$" required>
+                            pattern="([a-zA-Z]{2,}\s[a-zA-Z]{1,}'?-?[a-zA-Z]{2,}\s?([a-zA-Z]{1,})?)$"
+                            value="{{ current_user.name }}" required>
                         <div class="invalid-feedback"> A valid full name is required! </div>
                     </div>
 
@@ -29,30 +30,22 @@
                         <div class="input-group-prepend"></div>
                         <div class="input-group-text"><i class="far fa-envelope"></i></div>
                         <input type="text" class="form-control" name="email" placeholder="E-Mail"
-                            pattern="[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$" required>
+                            value="{{ current_user.email }}" pattern="[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$"
+                            required>
                         <div class="invalid-feedback"> A valid E-Mail is required! </div>
-                    </div>
-
-                    <div class="input-group my-2">
-                        <div class="input-group-prepend"></div>
-                        <div class="input-group-text"><i class="fas fa-key"></i></div>
-                        <input type="password" class="form-control" name="password" placeholder="Password"
-                            pattern="[a-zA-Z0-9~!@#$%^&*()_+=\- ]{8,128}" required>
-                        <div class="invalid-feedback"> A valid password is required! The password should contain between
-                            8 to 128 characters from the following: (a-z, A-Z, 0-9, ~!@#$%^&*()_+-=) </div>
                     </div>
 
                     <hr>
 
                     <div class="input-group my-2">
-                        <img src="{{ config['DEFAULT_PROFILE_PICTURE'] }}" alt="pp" class="mx-auto" width="200"
-                            height="200" id="profilepicimage" />
+                        <img src="{{ current_user.profile_picture }}" alt="pp" class="mx-auto" width="200" height="200"
+                            id="profilepicimage" />
                         <div class="w-100 my-1"></div>
                         <div class="input-group-prepend"></div>
                         <div class="input-group-text"><i class="fas fa-key"></i></div>
                         <input type="text" class="form-control" name="profilepic" id="profilepicinput"
                             placeholder="{{ config['DEFAULT_PROFILE_PICTURE'] }}"
-                            value="{{ config['DEFAULT_PROFILE_PICTURE'] }}" required>
+                            value="{{ current_user.profile_picture }}" required>
                         <div class="invalid-feedback"> Failed to load image! </div>
                     </div>
 
@@ -60,7 +53,7 @@
 
                     <div class="input-group mt-4" style="height: 50px;">
                         <button class="btn btn-success w-100 h-100" type="submit">
-                            <span><i class="fas fa-user-plus"></i> Register</span>
+                            <span><i class="fas fa-pencil-alt"></i> Commit Edits</span>
                         </button>
                     </div>
 
@@ -70,6 +63,5 @@
         </div>
     </div>
 </div>
-
 
 {% endblock %}
