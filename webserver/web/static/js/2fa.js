@@ -3,14 +3,14 @@ window.addEventListener('load', (e) => {
 
     if (tokenInput !== null && tokenInput !== undefined) {
         $('#enable2FAModal').on('show.bs.modal', () => {
-            $.get('/enable2fa').done(() => {
-                $('#qrcodeimg').attr('src', '/2faqr');
+            $.get('/profile/enable2fa').done(() => {
+                $('#qrcodeimg').attr('src', '/profile/2faqr');
             })
         }).on('hide.bs.modal', () => {
             if (typeof $('#continueBtn').attr('disabled') == typeof undefined) {
                 return location.reload();
             }
-            $.get('/remove2fa').done(() => {
+            $.get('/profile/remove2fa').done(() => {
                 $('#qrcodeimg').attr('src', '/static/img/logo.svg');
             })
         });

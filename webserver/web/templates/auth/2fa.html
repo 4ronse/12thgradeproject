@@ -84,7 +84,7 @@
 
                     <div class="col-6">
                         <button class="btn btn-outline-danger" data-toggle="modal" data-target="disable2famodal"
-                            onclick="document.location = '/remove2fa'">
+                            onclick="document.location = '{{ url_for('auth.remove_2fa') }}'">
                             Disable 2FA for my account
                         </button>
                     </div>
@@ -102,7 +102,8 @@
                                 </div>
                                 <div class="modal-body">
                                     <div class="mx-auto" style="width: 15rem; height: 15rem;">
-                                        <img src="/2faqr" class="w-100 h-100" alt="QR">
+                                        <img src="{{ url_for('auth.two_factor_auth_qr') }}" class="w-100 h-100"
+                                            alt="QR">
                                     </div>
                                 </div>
                                 <div class="modal-footer">

@@ -70,8 +70,6 @@ class Validators:
 #     AUTH     #
 #              #
 ################
-
-
 @auth.route('/login', methods=['GET', 'POST'])
 @login_pointless
 def login():
@@ -204,13 +202,39 @@ def profile():
         return render_template('auth/profile.html')
 
 
-@auth.route('/2fa')
+@auth.route('/profile/password', methods=['GET', 'POST'])
+@login_required
+def password():
+    if request.method == 'GET':
+        return render_template('auth/password.html')
+    elif request.method == 'POST':
+        current_password = request.form.get('currentpassword')
+        new_password = request.form.get('newpassword')
+
+        if not current_user.validate_password(current_password):
+            flash('Current password is incorrect!', 'error')
+            return redirect(url_for('auth.password'))
+
+        if not Validators.password(new_password):
+            flash(
+                'New password is not valid! The password should contain between 8 to 128 characters from the following: (a-z, A-Z, 0-9, ~!@#$%^&*()_+-=)',
+                'error')
+            return redirect(url_for('auth.password'))
+
+        current_user.password = new_password
+        db.session.commit()
+
+        flash('Successfully changed password!', 'success')
+        return redirect(url_for('auth.profile'))
+
+
+@auth.route('/profile/2fa', methods=['GET'])
 @login_required
 def two_factor_auth():
     return render_template('auth/2fa.html')
 
 
-@auth.route('/2faqr')
+@auth.route('/profile/2faqr', methods=['GET'])
 @login_required
 def two_factor_auth_qr():
     uri = pyqrcode.create(current_user.get_totp_uri())
@@ -224,7 +248,7 @@ def two_factor_auth_qr():
     }
 
 
-@auth.route('/enable2fa', methods=['GET'])
+@auth.route('/profile/enable2fa', methods=['GET'])
 @login_required
 def enable_2fa():
     if current_user.otp_secret is None:
@@ -232,7 +256,7 @@ def enable_2fa():
     return redirect(url_for('auth.two_factor_auth')), 200
 
 
-@auth.route('/remove2fa')
+@auth.route('/profile/remove2fa', methods=['GET'])
 @login_required
 def remove_2fa():
     current_user.remove_2fa()
