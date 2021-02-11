@@ -34,6 +34,7 @@ def create_app() -> Flask:
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.sqlite'
     app.config['PROJECT_NAME'] = Config.PROJECT_NAME
+    app.config['DEFAULT_PROFILE_PICTURE'] = Config.DEFAULT_PROFILE_PICTURE
 
     db.init_app(app)
 

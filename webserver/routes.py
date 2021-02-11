@@ -7,7 +7,7 @@ from flask.wrappers import Response
 from flask_login import current_user, login_user, logout_user, login_required
 from .models.Base import UUID
 from .models.User import User
-from . import db
+from . import db, config
 
 view = Blueprint('view', __name__)
 auth = Blueprint('auth', __name__)
@@ -103,7 +103,7 @@ def register():
     elif request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        profile_picture = request.form.get('profilepicture')
+        profile_picture = request.form.get('profilepic')
         name = request.form.get('name')
 
         errors = []
@@ -129,7 +129,8 @@ def register():
             flash('User with email {} already exists'.format(email), 'error')
             return redirect(url_for('auth.register'))
 
-        user = User(email=email, password=generate_password_hash(password, method='sha256'), name=name) # , profile_picture=profile_picture)
+        user = User(email=email, password=generate_password_hash(password, method='sha256'), name=name, profile_picture=profile_picture)
+        print(user.profile_picture)
         db.session.add(user)
         db.session.commit()
 
@@ -154,6 +155,10 @@ def logout():
 @view.route('/index')
 def index():
     return render_template('index.html')
+
+@view.route('/defaultprofilepicture')
+def _dpp():
+    return redirect(config.Config.DEFAULT_PROFILE_PICTURE)
 
 @view.route('/user/<uuid>')
 def user(uuid):
