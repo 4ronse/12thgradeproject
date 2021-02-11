@@ -14,6 +14,7 @@ from . import db, config
 view = Blueprint('view', __name__)
 auth = Blueprint('auth', __name__)
 
+
 #################
 #               #
 #     UTILS     #
@@ -51,7 +52,9 @@ def login_pointless(func, view='view.index'):
 class Validators:
     @staticmethod
     def name(val):
-        return re.search(r"^([a-zA-Z]{2,}\s[a-zA-Z]{1,}'?-?[a-zA-Z]{2,}\s?([a-zA-Z]{1,})?)$", val)
+        return re.search(
+            r"^([a-zA-Z]{2,}\s[a-zA-Z]{1,}'?-?[a-zA-Z]{2,}\s?([a-zA-Z]{1,})?)$",
+            val)
 
     @staticmethod
     def email(val):
@@ -67,6 +70,7 @@ class Validators:
 #     AUTH     #
 #              #
 ################
+
 
 @auth.route('/login', methods=['GET', 'POST'])
 @login_pointless
@@ -85,7 +89,7 @@ def login():
         if not user:
             flash('User not found!', 'error')
             return redirect(url_for('auth.login'))
-        
+
         if not user.validate_password(password):
             flash('Password incorrect!', 'error')
             return redirect(url_for('auth.login'))
@@ -100,6 +104,7 @@ def login():
         return redirect(url_for('view.index'))
     else:
         return redirect(url_for('view.index'))
+
 
 @auth.route('/register', methods=['GET', 'POST'])
 @login_pointless
@@ -117,13 +122,14 @@ def register():
 
         if not Validators.email(email):
             errors.append('E-Mail is not valid!')
-        
+
         if not Validators.password(password):
-            errors.append('Password is not valid! The password should contain between 8 to 128 characters from the following: (a-z, A-Z, 0-9, ~!@#$%^&*()_+-=)')
-        
+            errors.append(
+                'Password is not valid! The password should contain between 8 to 128 characters from the following: (a-z, A-Z, 0-9, ~!@#$%^&*()_+-=)'
+            )
+
         if not Validators.name(name):
             errors.append('Name is not valid!')
-        
 
         if errors:
             for error in errors:
@@ -136,7 +142,10 @@ def register():
             flash('User with email {} already exists'.format(email), 'error')
             return redirect(url_for('auth.register'))
 
-        user = User(email=email, password=password, name=name, profile_picture=profile_picture)
+        user = User(email=email,
+                    password=password,
+                    name=name,
+                    profile_picture=profile_picture)
         db.session.add(user)
         db.session.commit()
 
@@ -145,11 +154,13 @@ def register():
     else:
         return redirect(url_for('view.index'))
 
+
 @auth.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('view.index'))
+
 
 @auth.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -168,7 +179,6 @@ def profile():
 
         if not Validators.name(name):
             errors.append('Name is not valid!')
-        
 
         if errors:
             for error in errors:
@@ -178,7 +188,8 @@ def profile():
         if current_user.email != email:
             user = User.query.filter_by(email=email).first()
             if user:
-                flash('User with email {} already exists'.format(email), 'error')
+                flash('User with email {} already exists'.format(email),
+                      'error')
                 return redirect(url_for('auth.profile'))
 
         current_user.name = name
@@ -192,10 +203,12 @@ def profile():
     else:
         return render_template('auth/profile.html')
 
+
 @auth.route('/2fa')
 @login_required
 def two_factor_auth():
     return render_template('auth/2fa.html')
+
 
 @auth.route('/2faqr')
 @login_required
@@ -210,6 +223,7 @@ def two_factor_auth_qr():
         'Expires': '0'
     }
 
+
 @auth.route('/enable2fa', methods=['GET'])
 @login_required
 def enable_2fa():
@@ -217,17 +231,20 @@ def enable_2fa():
         current_user.generate_otp_secret()
     return redirect(url_for('auth.two_factor_auth')), 200
 
+
 @auth.route('/remove2fa')
 @login_required
 def remove_2fa():
     current_user.remove_2fa()
     return redirect(url_for('auth.two_factor_auth'))
 
+
 @auth.route('/validatetotptoken', methods=['POST'])
 @login_required
 def check_2fa():
     validity = current_user.verify_totp(request.get_data(as_text=True).strip())
     return str(validity), 200 if validity else 204
+
 
 #################
 #               #
@@ -241,11 +258,12 @@ def index():
         flash('You should enable 2FA in your profile settings :)', 'warn')
     return render_template('index.html')
 
+
 @view.route('/defaultprofilepicture')
 def _dpp():
     return redirect(config.Config.DEFAULT_PROFILE_PICTURE)
 
+
 @view.route('/user/<uuid>')
 def user(uuid):
     return str(User.query.get(uuid))
-

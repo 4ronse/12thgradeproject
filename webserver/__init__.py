@@ -10,10 +10,13 @@ from .config import Config
 
 db = SQLAlchemy()
 
+
 def create_app() -> Flask:
     """ Creates the app """
 
-    app = Flask(__name__, static_folder="web/static", template_folder="web/templates")
+    app = Flask(__name__,
+                static_folder="web/static",
+                template_folder="web/templates")
 
     app.config['DEBUG'] = Config.DEBUG
     app.config['SECRET_KEY'] = Config.SECRET_KEY

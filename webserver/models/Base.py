@@ -4,7 +4,9 @@ import uuid
 import furl
 from .. import db
 
-class GUID(TypeDecorator):  # https://docs.sqlalchemy.org/en/13/core/custom_types.html#backend-agnostic-guid-type
+
+# https://docs.sqlalchemy.org/en/13/core/custom_types.html#backend-agnostic-guid-type
+class GUID(TypeDecorator):
     """Platform-independent GUID type.
 
     Uses PostgreSQL's UUID type, otherwise uses
@@ -43,5 +45,6 @@ class BaseUserRelatedModel(db.Model):
 
     id = db.Column(GUID(), primary_key=True, default=uuid.uuid4)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
-    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
-
+    updated_at = db.Column(db.DateTime,
+                           default=db.func.current_timestamp(),
+                           onupdate=db.func.current_timestamp())
