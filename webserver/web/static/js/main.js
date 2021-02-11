@@ -12,7 +12,6 @@ window.addEventListener('load', (e) => {
 
         let ppinput = document.getElementById('profilepicinput');
         let ppimage = document.getElementById('profilepicimage');
-        let ppmessage = document.getElementById('profilepicmessage')
 
         if (ppinput !== null || ppinput !== undefined) {
             let flag = true;
