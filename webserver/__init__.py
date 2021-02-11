@@ -10,24 +10,10 @@ from .config import Config
 
 db = SQLAlchemy()
 
-
-def get_SSL_ctx() -> Union[SSL.Context, None]:
-    if Config.NO_SSL:
-        return None
-
-    try:
-        ctx = SSL.Context(SSL.PROTOCOL_TLSv1_2)
-        ctx.use_privatekey_file('local.key')
-        ctx.use_certificate_file('local.crt')
-        return ctx
-    except Exception as _:
-        return None
-
-
 def create_app() -> Flask:
     """ Creates the app """
 
-    app = Flask(__name__, static_folder="web/static", template_folder="web/templates") #, ssl_context=get_SSL_ctx())
+    app = Flask(__name__, static_folder="web/static", template_folder="web/templates")
 
     app.config['DEBUG'] = Config.DEBUG
     app.config['SECRET_KEY'] = Config.SECRET_KEY

@@ -1,5 +1,7 @@
 import re
+import pyqrcode
 
+from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from flask import Blueprint, request, render_template, redirect, url_for, flash
@@ -76,6 +78,7 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
         remember = True if request.form.get('remember') else False
+        totptoken = request.form.get('2fa')
 
         user = User.query.filter_by(email=email).first()
 
@@ -83,8 +86,12 @@ def login():
             flash('User not found!', 'error')
             return redirect(url_for('auth.login'))
         
-        if not check_password_hash(user.password, password):
+        if not user.validate_password(password):
             flash('Password incorrect!', 'error')
+            return redirect(url_for('auth.login'))
+
+        if user.has_2fa and not user.verify_totp(totptoken):
+            flash('Wrong 2FA token, please try again!', 'error')
             return redirect(url_for('auth.login'))
 
         login_user(user, remember=remember)
@@ -129,8 +136,7 @@ def register():
             flash('User with email {} already exists'.format(email), 'error')
             return redirect(url_for('auth.register'))
 
-        user = User(email=email, password=generate_password_hash(password, method='sha256'), name=name, profile_picture=profile_picture)
-        print(user.profile_picture)
+        user = User(email=email, password=password, name=name, profile_picture=profile_picture)
         db.session.add(user)
         db.session.commit()
 
@@ -185,7 +191,31 @@ def profile():
         return redirect(url_for('auth.profile'))
     else:
         return render_template('auth/profile.html')
-        
+
+@auth.route('/2fa')
+@login_required
+def two_factor_auth():
+    if current_user.otp_secret is None:
+        current_user.generate_otp_secret()
+    return redirect(url_for('auth.2faqr'))
+
+@auth.route('/2faqr')
+@login_required
+def two_factor_auth_qr():
+    uri = pyqrcode.create(current_user.get_totp_uri())
+    stream = BytesIO()
+    uri.svg(stream, scale=5)
+    return stream.getvalue(), 200, {
+        'Content-Type': 'image/svg+xml',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    }
+
+@auth.route('/verify2fa/<token>')
+@login_required
+def check_2fa(token):
+    return str(current_user.verify_totp(token))
 
 #################
 #               #
