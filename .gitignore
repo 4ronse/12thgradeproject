@@ -132,5 +132,5 @@ dmypy.json
 .vscode/
 
 # Custom
-website/database.sqlite
-website/uploads/
+webserver/database.sqlite
+webserver/uploads/
