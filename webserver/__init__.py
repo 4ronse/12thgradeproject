@@ -12,7 +12,7 @@ db = SQLAlchemy()
 
 
 def create_app() -> Flask:
-    """ Creates the app """
+    """ Creates Flask object """
 
     app = Flask(__name__,
                 static_folder="web/static",

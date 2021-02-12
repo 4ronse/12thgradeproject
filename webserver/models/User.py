@@ -20,19 +20,38 @@ class User(UserMixin, BaseUserRelatedModel):
     otp_secret = db.Column(db.String(16), nullable=True)
 
     def generate_otp_secret(self) -> str:
+        """ Method will generate a random OTP token and also commits changes to database
+
+        Returns:
+            str: The OTP token
+        """
         self.otp_secret = base64.b32encode(os.urandom(10)).decode('utf-8')
         db.session.commit()
         return self.otp_secret
 
     def remove_2fa(self):
+        """ Method sets user's OTP token to None and commits to database """
         self.otp_secret = None
         db.session.commit()
 
-    def get_totp_uri(self):
+    def get_totp_uri(self) -> str:
+        """ Method creates a formated TOTP uri
+
+        Returns:
+            str: TOTP uri
+        """
         return 'otpauth://totp/{project_name}:{username}?secret={otp_secret}&issuer={project_name}' \
             .format(project_name=Config.PROJECT_NAME, username=self.id, otp_secret=self.otp_secret)
 
-    def verify_totp(self, token):
+    def verify_totp(self, token: str) -> bool:
+        """ Method verefies TOTP token
+
+        Args:
+            token (str): TOTP token
+
+        Returns:
+            bool: Is token valid
+        """
         return onetimepass.valid_totp(token, self.otp_secret)
 
     @property
@@ -40,7 +59,7 @@ class User(UserMixin, BaseUserRelatedModel):
         raise AttributeError('Password is not a readable attribute')
 
     @password.setter
-    def password(self, password):
+    def password(self, password: str):
         self._password = generate_password_hash(password=password,
                                                 method='sha256')
 
@@ -52,4 +71,4 @@ class User(UserMixin, BaseUserRelatedModel):
         return check_password_hash(self._password, password)
 
     def __repr__(self):
-        return f"User[ID: {self.id}; Name: {self.name}; E-Mail: {self.email}; PasswordHash: {self.password}]"
+        return f"User[ID: {self.id}; Name: {self.name}; E-Mail: {self.email}; Has2FAEnabled: {self.has_2fa}]"

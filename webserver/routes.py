@@ -276,7 +276,6 @@ def check_2fa():
 #               #
 #################
 @view.route('/')
-@view.route('/index')
 def index():
     if current_user.is_authenticated and not current_user.has_2fa:
         flash('You should enable 2FA in your profile settings :)', 'warn')

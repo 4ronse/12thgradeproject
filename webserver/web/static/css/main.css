@@ -1,3 +1,7 @@
+body {
+    background-color: var(--bs-dark);
+}
+
 .profilepic {
     border-radius: 0.25rem;
 }
@@ -9,4 +13,14 @@
 div.profile-sep {
     display: inline-block;
     margin: 10px 0;
+}
+
+.dark-mode-switch {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    border-radius: .75rem;
+    border: solid 2px var(--bs-gray);
+    background-color: var(--bs-gray-dark);
+    color: white;
 }
