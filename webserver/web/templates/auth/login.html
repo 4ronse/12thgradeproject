@@ -52,6 +52,16 @@
                     <hr>
 
                     <div class="input-group mt-4" style="height: 50px;">
+                        <a class="w-100 h-100" href=" {{ url_for('auth.reset_request') }} ">
+                            <button class="btn btn-success w-100 h-100" type="button">
+                                <span><i class="fas fa-key"></i> Forgot Password</span>
+                            </button>
+                        </a>
+                    </div>
+
+                    <hr>
+
+                    <div class="input-group mt-4" style="height: 50px;">
                         <a class="w-100 h-100" href=" {{ url_for('auth.register') }} ">
                             <button class="btn btn-success w-100 h-100" type="button">
                                 <span><i class="fas fa-user-plus"></i> Register</span>

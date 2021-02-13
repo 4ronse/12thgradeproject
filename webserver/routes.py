@@ -1,4 +1,5 @@
 import re
+import os
 import pyqrcode
 
 from io import BytesIO
@@ -8,12 +9,16 @@ from flask import Blueprint, request, render_template, redirect, url_for, flash
 from flask.wrappers import Response
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_mail import Message
+from sqlalchemy.exc import StatementError
 from .models.Base import UUID
 from .models.User import User
+from .models.PasswordResetRequest import PasswordResetRequest
 from . import db, config, mail
 
-view = Blueprint('view', __name__)
-auth = Blueprint('auth', __name__)
+from pathlib import Path
+
+view = Blueprint('view', __name__, static_folder="web/static")
+auth = Blueprint('auth', __name__, static_folder="web/static")
 
 
 #################
@@ -259,17 +264,119 @@ def check_2fa():
     return str(validity), 200 if validity else 204
 
 
-@auth.route('/mail/test/<email>/<subject>/<content>')
-def email_test(email, subject, content):
+@auth.route('/testprr/html/<id>')
+def testemail(id):
+    return render_template('emails/reset_password.html',
+                           **{'user': User.query.filter_by(id=id).first()})
+
+
+@auth.route('/reset', methods=['GET', 'POST'])
+@login_pointless
+def reset_request():
+    if request.method == 'GET':
+        return render_template('auth/reset/reset_request.html')
+    elif request.method == 'POST':
+        email = request.form.get('email')
+        user: User = User.query.filter_by(email=email).first()
+
+        if not user:
+            flash(f'User with E-Mail {email} was not found!', 'error')
+            return redirect(url_for('auth.reset_request'))
+
+        prr: PasswordResetRequest = PasswordResetRequest.query.order_by(
+            PasswordResetRequest.created_at.desc()).filter_by(
+                user_id=user.id).first()
+
+        if prr and prr.is_request_still_valid and not prr.is_request_used:
+            flash(f'A reset form has already been sent to your E-Mail!',
+                  'error')
+            return redirect(url_for('auth.reset_request'))
+
+        prr = PasswordResetRequest(requested_by=request.remote_addr,
+                                   user_id=user.id)
+        db.session.add(prr)
+        db.session.commit()
+
+        msg = Message()
+        msg.subject = 'Password Reset'
+        msg.recipients = [user.email]
+        msg.sender = config.Config.MAIL_USERNAME
+        msg.html = render_template('emails/reset_password.html', **{
+            'user': user,
+            'token': prr.id
+        })
+
+        mail.send(msg)
+
+        flash(f'A reset form has been sent to your E-Mail!', 'success')
+        return redirect(url_for('auth.reset_request'))
+
+
+@auth.route('/reset/<token>', methods=['GET', 'POST'])
+@login_pointless
+def reset(token):
+    try:
+        prr: PasswordResetRequest = PasswordResetRequest.query.filter_by(
+            id=token).order_by(PasswordResetRequest.created_at.desc()).first()
+    except StatementError as e:
+        prr = None
+
+    if not prr:
+        flash(f'Password request token "{token}" is incorrect!', 'error')
+        return redirect(url_for('auth.login'))
+
+    if prr.is_request_used:
+        flash(f'Password request token "{token}" is already used!', 'error')
+        return redirect(url_for('auth.login'))
+
+    if not prr.is_request_still_valid:
+        flash(f'Password request token "{token}" is not valid anymore!',
+              'error')
+        return redirect(url_for('auth.login'))
+
+    if request.method == 'GET':
+        return render_template('auth/reset/reset.html')
+    elif request.method == 'POST':
+        new_password = request.form.get('newpassword')
+
+        if not Validators.password(new_password):
+            flash(
+                'New password is not valid! The password should contain between 8 to 128 characters from the following: (a-z, A-Z, 0-9, ~!@#$%^&*()_+-=)',
+                'error')
+            return redirect(url_for('auth.reset', token=token))
+
+        prr.user.password = new_password
+        prr.used_by = request.remote_addr
+        db.session.commit()
+
+        flash('Successfully changed password!', 'success')
+        return redirect(url_for('auth.login'))
+
+
+@auth.route('/mail/test/<id>')
+def email_test(id):
     msg = Message()
 
-    msg.subject = subject
-    msg.recipients = [email]
-    msg.sender = '4ronse@gmail.com'
-    msg.body = content
+    user = User.query.filter_by(id=id).first()
+
+    if not user:
+        return 'Bruh'
+
+    with (Path(auth.static_folder) / 'img' / 'logo.svg').open('rb') as img:
+        msg.subject = 'Password reset'
+        msg.recipients = [user.email]
+        msg.sender = '4ronse@gmail.com'
+        msg.html = render_template('emails/reset_password.html',
+                                   **{'user': user})
+        msg.attach('logo.svg',
+                   'image/svg+xml',
+                   img.read(),
+                   'inline',
+                   headers=[
+                       ['Content-ID', '<logo>'],
+                   ])
 
     mail.send(msg)
-
     return 'OK'
 
 

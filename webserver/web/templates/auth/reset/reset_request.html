@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %} Reset Password {% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card mx-auto" style="max-width: 440px;">
+            <div class="card-header text-center">
+                <h3> Reset Password </h3>
+            </div>
+            <div class="card-body">
+
+                <form name="login-form" class="needs-validation justify-content-center text-center" method="post"
+                    novalidate>
+                    <div class="input-group my-2 form-outline">
+                        <div class="input-group-prepend"></div>
+                        <div class="input-group-text"><i class="far fa-envelope"></i></div>
+                        <input type="text" class="form-control" id="email" name="email" placeholder="E-Mail" required>
+                    </div>
+
+                    <div class="input-group my-4" style="height: 50px;">
+                        <button class="btn btn-success w-100 h-100" type="submit">
+                            <span> Send Link </span>
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
