@@ -41,7 +41,7 @@ class User(UserMixin, BaseUserRelatedModel):
             str: TOTP uri
         """
         return 'otpauth://totp/{project_name}:{username}?secret={otp_secret}&issuer={project_name}' \
-            .format(project_name=Config.PROJECT_NAME, username=self.id, otp_secret=self.otp_secret)
+            .format(project_name=Config.PROJECT_NAME, username=self.email, otp_secret=self.otp_secret)
 
     def verify_totp(self, token: str) -> bool:
         """ Method verefies TOTP token
