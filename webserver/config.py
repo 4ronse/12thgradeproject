@@ -1,7 +1,22 @@
+from dotenv import load_dotenv
+from pathlib import Path
+from os import getenv
+
+dotenv_path = Path('..') / '.env'
+
+load_dotenv(dotenv_path=dotenv_path)
+
+
 class Config:
-    PROJECT_NAME = "NAGDR"
-    DEBUG = True
-    SECRET_KEY = "Ye whatever"
-    # SECRET_KEY = "whf99<Fo2z.V947IQ4MeDvk9n%OQ-BcXWQnrp;1p0.mqmhl5T!HOZxU2E"
-    NO_SSL = True
-    DEFAULT_PROFILE_PICTURE = '/static/img/logo.svg'
+    DEBUG = getenv('DEBUG') or False
+    PROJECT_NAME = getenv('PROJECT_NAME') or 'NAGDR'
+    SECRET_KEY = getenv('SECRET_KEY') or \
+        '38m9n740fgv529e08m,7345kjg6sz9870m3,2jn4k5wgvz'  # Randomly bashed my hands on keyboard :))
+    NO_SSL = getenv('NO_SSL') or True
+    DEFAULT_PROFILE_PICTURE = getenv('DEFAULT_PROFILE_PICTURE')
+
+    MAIL_SERVER = getenv('MAIL_SERVER')
+    MAIL_PORT = getenv('MAIL_PORT')
+    MAIL_USE_SSL = getenv('MAIL_USE_SSL')
+    MAIL_USERNAME = getenv('MAIL_USERNAME')
+    MAIL_PASSWORD = getenv('MAIL_PASSWORD')

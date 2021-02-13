@@ -7,9 +7,10 @@ from functools import wraps
 from flask import Blueprint, request, render_template, redirect, url_for, flash
 from flask.wrappers import Response
 from flask_login import current_user, login_user, logout_user, login_required
+from flask_mail import Message
 from .models.Base import UUID
 from .models.User import User
-from . import db, config
+from . import db, config, mail
 
 view = Blueprint('view', __name__)
 auth = Blueprint('auth', __name__)
@@ -268,6 +269,20 @@ def remove_2fa():
 def check_2fa():
     validity = current_user.verify_totp(request.get_data(as_text=True).strip())
     return str(validity), 200 if validity else 204
+
+
+@auth.route('/mail/test/<email>/<subject>/<content>')
+def email_test(email, subject, content):
+    msg = Message()
+
+    msg.subject = subject
+    msg.recipients = [email]
+    msg.sender = '4ronse@gmail.com'
+    msg.body = content
+
+    mail.send(msg)
+
+    return 'OK'
 
 
 #################
