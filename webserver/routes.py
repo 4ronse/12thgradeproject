@@ -1,21 +1,15 @@
 import re
-import os
 import pyqrcode
 
 from io import BytesIO
-from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from flask import Blueprint, request, render_template, redirect, url_for, flash
-from flask.wrappers import Response
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_mail import Message
 from sqlalchemy.exc import StatementError
-from .models.Base import UUID
 from .models.User import User
 from .models.PasswordResetRequest import PasswordResetRequest
 from . import db, config, mail
-
-from pathlib import Path
 
 view = Blueprint('view', __name__, static_folder="web/static")
 auth = Blueprint('auth', __name__, static_folder="web/static")
@@ -351,33 +345,6 @@ def reset(token):
 
         flash('Successfully changed password!', 'success')
         return redirect(url_for('auth.login'))
-
-
-@auth.route('/mail/test/<id>')
-def email_test(id):
-    msg = Message()
-
-    user = User.query.filter_by(id=id).first()
-
-    if not user:
-        return 'Bruh'
-
-    with (Path(auth.static_folder) / 'img' / 'logo.svg').open('rb') as img:
-        msg.subject = 'Password reset'
-        msg.recipients = [user.email]
-        msg.sender = '4ronse@gmail.com'
-        msg.html = render_template('emails/reset_password.html',
-                                   **{'user': user})
-        msg.attach('logo.svg',
-                   'image/svg+xml',
-                   img.read(),
-                   'inline',
-                   headers=[
-                       ['Content-ID', '<logo>'],
-                   ])
-
-    mail.send(msg)
-    return 'OK'
 
 
 #################

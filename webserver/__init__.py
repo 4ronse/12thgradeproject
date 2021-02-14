@@ -2,10 +2,6 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
-from OpenSSL import SSL
-from uuid import UUID
-
-from typing import Union
 
 from .config import Config
 

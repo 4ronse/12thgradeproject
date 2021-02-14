@@ -1,7 +1,6 @@
-from sqlalchemy.types import TypeDecorator, CHAR, UnicodeText
+from sqlalchemy.types import TypeDecorator, CHAR
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
-import furl
 from .. import db
 
 

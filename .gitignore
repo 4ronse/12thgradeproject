@@ -131,6 +131,9 @@ dmypy.json
 # VSCode
 .vscode/
 
+# idea
+.idea/
+
 # Custom
 webserver/database.sqlite
 webserver/uploads/
