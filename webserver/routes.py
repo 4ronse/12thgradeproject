@@ -82,7 +82,7 @@ def login():
         remember = True if request.form.get('remember') else False
         totptoken = request.form.get('2fa')
 
-        user = User.query.filter_by(email=email).first()
+        user: User = User.query.filter_by(email=email).first()
 
         if not user:
             flash('User not found!', 'error')
@@ -134,7 +134,7 @@ def register():
                 flash(error, 'error')
             return render_template('auth/register.html')
 
-        user = User.query.filter_by(email=email).first()
+        user: User = User.query.filter_by(email=email).first()
 
         if user:
             flash('User with email {} already exists'.format(email), 'error')
@@ -310,7 +310,7 @@ def reset_request():
 @login_pointless
 def reset(token):
     try:
-        prr: PasswordResetRequest = PasswordResetRequest.query.filter_by(
+        prr: [PasswordResetRequest, None] = PasswordResetRequest.query.filter_by(
             id=token).order_by(PasswordResetRequest.created_at.desc()).first()
     except StatementError as e:
         prr = None
@@ -335,7 +335,8 @@ def reset(token):
 
         if not Validators.password(new_password):
             flash(
-                'New password is not valid! The password should contain between 8 to 128 characters from the following: (a-z, A-Z, 0-9, ~!@#$%^&*()_+-=)',
+                'New password is not valid! The password should contain between 8 to 128 characters from the '
+                'following: (a-z, A-Z, 0-9, ~!@#$%^&*()_+-=)',
                 'error')
             return redirect(url_for('auth.reset', token=token))
 
