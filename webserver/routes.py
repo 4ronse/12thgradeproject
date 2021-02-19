@@ -3,12 +3,13 @@ import pyqrcode
 
 from io import BytesIO
 from functools import wraps
-from flask import Blueprint, request, render_template, redirect, url_for, flash
+from flask import Blueprint, request, render_template, redirect, url_for, flash, session
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_mail import Message
 from sqlalchemy.exc import StatementError
 from .models.User import User
 from .models.PasswordResetRequest import PasswordResetRequest
+from .utils.encryptionutils import get_fernet
 from . import db, config, mail
 
 view = Blueprint('view', __name__, static_folder="web/static")
@@ -98,6 +99,7 @@ def login():
 
         login_user(user, remember=remember)
 
+        session['my_key'] = user.get_encryption_key(password)
         flash(f'Successfully logged in as {user.name}!', 'success')
         return redirect(url_for('view.index'))
     else:
@@ -258,12 +260,6 @@ def check_2fa():
     return str(validity), 200 if validity else 204
 
 
-@auth.route('/testprr/html/<id>')
-def testemail(id):
-    return render_template('emails/reset_password.html',
-                           **{'user': User.query.filter_by(id=id).first()})
-
-
 @auth.route('/reset', methods=['GET', 'POST'])
 @login_pointless
 def reset_request():
@@ -296,8 +292,7 @@ def reset_request():
         msg.recipients = [user.email]
         msg.sender = config.Config.MAIL_USERNAME
         msg.html = render_template('emails/reset_password.html', **{
-            'user': user,
-            'token': prr.id
+            'prr': prr
         })
 
         mail.send(msg)
@@ -312,7 +307,7 @@ def reset(token):
     try:
         prr: [PasswordResetRequest, None] = PasswordResetRequest.query.filter_by(
             id=token).order_by(PasswordResetRequest.created_at.desc()).first()
-    except StatementError as e:
+    except StatementError:
         prr = None
 
     if not prr:
@@ -346,6 +341,18 @@ def reset(token):
 
         flash('Successfully changed password!', 'success')
         return redirect(url_for('auth.login'))
+
+
+@auth.route('/getkey')
+@login_required
+def test_getkey():
+    f = get_fernet(session['my_key'])
+    k = f.decrypt(current_user.second_encryption_key)
+    # out = ''
+    # for b in k:
+    #     out += f'{hex(b).upper()[2:]} '
+
+    return k
 
 
 #################

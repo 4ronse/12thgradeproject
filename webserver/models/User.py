@@ -7,6 +7,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from .Base import BaseUserRelatedModel
 from .. import db
 from ..config import Config
+from ..utils.encryptionutils import get_encryption_key, get_fernet
+
+from typing import Union
 
 
 class User(UserMixin, BaseUserRelatedModel):
@@ -18,6 +21,36 @@ class User(UserMixin, BaseUserRelatedModel):
                                 nullable=True,
                                 default=Config.DEFAULT_PROFILE_PICTURE)
     otp_secret = db.Column(db.String(16), nullable=True)
+    second_encryption_key = db.Column(db.String, nullable=False)  # this IS encrypted
+    first_encryption_key_salt = db.Column(db.String, nullable=False)
+    second_encryption_key_salt = db.Column(db.String, nullable=False)  # this is not encrypted
+
+    def __init__(self, password: str, *args, **kwargs):
+        """
+        TODO:
+            WHAT THE FUCK IS THIS!?! AM I FUCKING STUPID?? AM I UTTERLY RETARDED?!?!
+            FUCKING REDO THIS ENCRYPTION INTEGRATION FUCKING DUMBASSNESS FFS
+        """
+        super(User, self).__init__(*args, **kwargs)
+
+        if key_and_salt := self._generate_new_encryption_key():
+            self.first_encryption_key_salt = salt = os.urandom(512)
+            fernet = get_fernet(get_encryption_key(password, salt))
+
+            self.second_encryption_key_salt = key_and_salt[1]
+            self.second_encryption_key = fernet.encrypt(key_and_salt[0])
+
+        self.password = password
+
+    def _generate_new_encryption_key(self) -> Union[tuple[bytes, bytes], None]:
+        if not self.second_encryption_key:
+            salt = os.urandom(512)
+            return get_encryption_key(os.urandom(512), salt), salt
+        return None
+
+    def get_encryption_key(self, password: str) -> bytes:
+        password = password.encode()
+        return get_encryption_key(password, self.first_encryption_key_salt)
 
     def generate_otp_secret(self) -> str:
         """ Method will generate a random OTP token and also commits changes to database
