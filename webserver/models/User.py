@@ -2,10 +2,11 @@ import base64
 import os
 import onetimepass
 
+from pathlib import Path
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from .Base import BaseUserRelatedModel
-from .. import db
+from .. import db, app
 from ..config import Config
 from ..utils.encryptionutils import get_encryption_key, get_fernet
 
@@ -14,16 +15,21 @@ from typing import Union
 
 class User(UserMixin, BaseUserRelatedModel):
     __tablename__ = 'users'
+
     email = db.Column(db.String(100), unique=True)
     name = db.Column(db.String, nullable=False)
     _password = db.Column('password', db.String(64), nullable=False)
     profile_picture = db.Column(db.String,
                                 nullable=True,
                                 default=Config.DEFAULT_PROFILE_PICTURE)
+
     otp_secret = db.Column(db.String(16), nullable=True)
-    second_encryption_key = db.Column(db.String, nullable=False)  # this IS encrypted
+
     first_encryption_key_salt = db.Column(db.String, nullable=False)
+    second_encryption_key = db.Column(db.String, nullable=False)  # this IS encrypted
     second_encryption_key_salt = db.Column(db.String, nullable=False)  # this is not encrypted
+
+    # files = db.relationship('UploadedFile', backref='users', lazy=True)
 
     def __init__(self, password: str, *args, **kwargs):
         """
@@ -42,8 +48,12 @@ class User(UserMixin, BaseUserRelatedModel):
 
         self.password = password
 
-    def _generate_new_encryption_key(self) -> Union[tuple[bytes, bytes], None]:
-        if not self.second_encryption_key:
+        if not self.folder.exists():
+            # Ideally mode shouldn't be 0o777 but whatever, that's just a school project
+            self.folder.mkdir(True)
+
+    def _generate_new_encryption_key(self, override: bool = False) -> Union[tuple[bytes, bytes], None]:
+        if not self.second_encryption_key or override:
             salt = os.urandom(512)
             return get_encryption_key(os.urandom(512), salt), salt
         return None
@@ -93,6 +103,7 @@ class User(UserMixin, BaseUserRelatedModel):
 
     @password.setter
     def password(self, password: str):
+        self._generate_new_encryption_key(override=True)
         self._password = generate_password_hash(password=password,
                                                 method='sha256')
 
@@ -103,5 +114,21 @@ class User(UserMixin, BaseUserRelatedModel):
     def validate_password(self, password) -> bool:
         return check_password_hash(self._password, password)
 
+    @property
+    def folder(self) -> Path:
+        def mkdirs(p: Path):
+            if p.parent and not p.parent.exists():
+                mkdirs(p.parent)
+            p.mkdir()
+
+        path = Path(app.config['UPLOAD_PATH']) / f'{self.id}'
+        if not path.exists():
+            # Ideally mode shouldn't be 0o777 but whatever, that's just a school project
+            mkdirs(path)
+        return path
+
     def __repr__(self):
         return f"User[ID: {self.id}; Name: {self.name}; E-Mail: {self.email}; Has2FAEnabled: {self.has_2fa}]"
+
+    def delete(self):
+        pass

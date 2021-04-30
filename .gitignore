@@ -136,4 +136,4 @@ dmypy.json
 
 # Custom
 webserver/database.sqlite
-webserver/uploads/
+webserver/web/uploads/

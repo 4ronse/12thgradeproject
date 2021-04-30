@@ -7,10 +7,12 @@ from .config import Config
 
 db = SQLAlchemy()
 mail = Mail()
+app: Flask = None
 
 
 def create_app() -> Flask:
     """ Creates Flask object """
+    global app
 
     app = Flask(__name__,
                 static_folder="web/static",
@@ -23,6 +25,7 @@ def create_app() -> Flask:
     app.config['SECRET_KEY'] = Config.SECRET_KEY
     app.config['PROJECT_NAME'] = Config.PROJECT_NAME
     app.config['DEFAULT_PROFILE_PICTURE'] = Config.DEFAULT_PROFILE_PICTURE
+    app.config['UPLOAD_PATH'] = Config.UPLOAD_PATH or 'uploads/'
 
     app.config['MAIL_SERVER'] = Config.MAIL_SERVER
     app.config['MAIL_PORT'] = Config.MAIL_PORT
@@ -45,8 +48,15 @@ def create_app() -> Flask:
 
     from .routes import view as view_blueprint
     from .routes import auth as auth_blueprint
+    from .routes import storage as storage_blueprint
 
     app.register_blueprint(view_blueprint)
     app.register_blueprint(auth_blueprint)
+    app.register_blueprint(storage_blueprint)
 
     return app
+
+
+if __name__ == '__main__':
+    create_app()
+    app.run(host='0.0.0.0', port=8080, debug=1)

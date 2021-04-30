@@ -1,1 +1,12 @@
 {% extends "base.html" %}
+
+
+{% block content %}
+
+{% if not current_user.is_authenticated %}
+    {% include 'index/notAuthed.html' %}
+{% else %}
+    {% include 'index/authed.html' %}
+{% endif %}
+
+{% endblock %}

@@ -1,3 +1,4 @@
+import os
 import re
 import pyqrcode
 
@@ -9,11 +10,16 @@ from flask_mail import Message
 from sqlalchemy.exc import StatementError
 from .models.User import User
 from .models.PasswordResetRequest import PasswordResetRequest
-from .utils.encryptionutils import get_fernet
+from .models.UserFile import UserFile
+from .utils.encryptionutils import get_fernet, get_encryption_key
 from . import db, config, mail
+
+from werkzeug.datastructures import FileStorage
+from pathlib import Path
 
 view = Blueprint('view', __name__, static_folder="web/static")
 auth = Blueprint('auth', __name__, static_folder="web/static")
+storage = Blueprint('storage', __name__, static_folder="web/static")
 
 
 #################
@@ -40,6 +46,7 @@ def login_pointless(func, view='view.index'):
         func: function
         view: str
     """
+
     @wraps(func)
     def decorator(*args, **kwargs):
         if current_user.is_authenticated:
@@ -275,7 +282,7 @@ def reset_request():
 
         prr: PasswordResetRequest = PasswordResetRequest.query.order_by(
             PasswordResetRequest.created_at.desc()).filter_by(
-                user_id=user.id).first()
+            user_id=user.id).first()
 
         if prr and prr.is_request_still_valid and not prr.is_request_used:
             flash(f'A reset form has already been sent to your E-Mail!',
@@ -360,18 +367,69 @@ def test_getkey():
 #     VIEWS     #
 #               #
 #################
+def make_tree(path):
+    tree = dict(name=path, children=[])
+    try:
+        lst = os.listdir(path)
+    except OSError:
+        pass  # ignore errors
+    else:
+        for name in lst:
+            fn = os.path.join(path, name)
+            if os.path.isdir(fn):
+                tree['children'].append(make_tree(fn))
+            else:
+                tree['children'].append(dict(name=fn))
+    return tree
+
+
 @view.route('/')
 def index():
     if current_user.is_authenticated and not current_user.has_2fa:
         flash('You should enable 2FA in your profile settings :)', 'warn')
+
     return render_template('index.html')
+
+
+@view.route('/upload', methods=['POST'])
+@login_required
+def upload():
+    from . import app
+
+    files = request.files.getlist('file')
+
+    first_key = session['my_key']
+    first_fernet = get_fernet(first_key)
+
+    file_encryption_key = first_fernet.decrypt(current_user.second_encryption_key)
+
+    def mkdirs(p: Path):
+        if p.parent and not p.parent.exists():
+            mkdirs(p.parent)
+        p.mkdir(exist_ok=True)
+
+    for file in files:
+        file: FileStorage
+
+        path: Path = current_user.folder / file.filename
+        mkdirs(path.parent)
+
+        userfile: UserFile = UserFile(owner=current_user, relative_path=str(path.relative_to(Path(app.root_path) / 'web/uploads' / str(current_user.id))))
+        print(userfile)
+
+        with path.open('wb') as f:
+            while chunk := file.stream.read(8096):
+                f.write(chunk)
+
+    return 'OK'
 
 
 @view.route('/defaultprofilepicture')
 def _dpp():
     return redirect(config.Config.DEFAULT_PROFILE_PICTURE)
 
-
-@view.route('/user/<uuid>')
-def user(uuid):
-    return str(User.query.get(uuid))
+#################
+#               #
+#    STORAGE    #
+#               #
+#################
