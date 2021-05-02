@@ -1,13 +1,18 @@
 import os
 import re
+import uuid
+
 import pyqrcode
 
 from io import BytesIO
 from functools import wraps
-from flask import Blueprint, request, render_template, redirect, url_for, flash, session
+from flask import Blueprint, request, render_template, redirect, url_for, flash, session, abort, Response, \
+    stream_with_context
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_mail import Message
 from sqlalchemy.exc import StatementError
+
+from .models.FileShare import FileShare
 from .models.User import User
 from .models.PasswordResetRequest import PasswordResetRequest
 from .models.UserFile import UserFile
@@ -106,7 +111,7 @@ def login():
 
         login_user(user, remember=remember)
 
-        session['my_key'] = user.get_encryption_key(password)
+        session['my_key'] = user.get_password_based_pbkdf2_encryption_key(password)
         flash(f'Successfully logged in as {user.name}!', 'success')
         return redirect(url_for('view.index'))
     else:
@@ -394,39 +399,156 @@ def index():
 @view.route('/upload', methods=['POST'])
 @login_required
 def upload():
-    from . import app
-
-    files = request.files.getlist('file')
-
-    first_key = session['my_key']
-    first_fernet = get_fernet(first_key)
-
-    file_encryption_key = first_fernet.decrypt(current_user.second_encryption_key)
-
     def mkdirs(p: Path):
         if p.parent and not p.parent.exists():
             mkdirs(p.parent)
         p.mkdir(exist_ok=True)
 
+    from . import app
+
+    files = request.files.getlist('file')
+
     for file in files:
         file: FileStorage
 
-        path: Path = current_user.folder / file.filename
+        fernet = get_fernet(session['my_key'])
+
+        key, salt = os.urandom(128), os.urandom(512)
+        encrypted_key = fernet.encrypt(key)
+
+        fernet = get_fernet(get_encryption_key(key, salt))
+
+        from uuid import uuid4
+        userfile: UserFile = UserFile(id=uuid4(), owner=current_user.id,
+                                      real_name=fernet.encrypt(file.filename.encode()),
+                                      key=encrypted_key, salt=salt)
+
+        path: Path = current_user.folder / ('%.32x' % userfile.id.int)
+        relative_path = path.relative_to(Path(app.config['UPLOAD_PATH']) / f'{current_user.id}')
         mkdirs(path.parent)
+        userfile.relative_to_upload_dir_path = fernet.encrypt(str(relative_path).encode())
 
-        userfile: UserFile = UserFile(owner=current_user, relative_path=str(path.relative_to(Path(app.root_path) / 'web/uploads' / str(current_user.id))))
-        print(userfile)
+        with path.open('wb') as local_file:
+            while chunk := file.stream.read(8096 * 16):
+                local_file.write(fernet.encrypt(chunk))
 
-        with path.open('wb') as f:
-            while chunk := file.stream.read(8096):
-                f.write(chunk)
+        db.session.add(userfile)
+    db.session.commit()
 
     return 'OK'
+
+
+@view.route('/download/<fid>', methods=['GET'])
+def download(fid):
+    fid = uuid.UUID(fid)
+
+    if not current_user.is_anonymous:
+        fernet = get_fernet(session['my_key'])
+        if (file := UserFile.query.filter_by(id=fid).first()) and file.owner == current_user.id:
+            key = fernet.decrypt(file.key)
+            salt = file.salt
+            fernet = get_fernet(get_encryption_key(key, salt))
+
+            fp: Path = current_user.folder / fernet.decrypt(file.relative_to_upload_dir_path).decode()
+            fn = fernet.decrypt(file.real_name).decode()
+
+            dk = get_encryption_key(key, salt)
+            df = get_fernet(dk)
+
+            def context():
+                with fp.open('rb') as local_file:
+                    while chunk := local_file.read(172812):  # Always constant!
+                        yield df.decrypt(chunk)
+
+            res = Response(stream_with_context(context()))
+            res.headers['Content-Disposition'] = f'attachment; filename="{fn}"'
+            return res
+
+        elif (file := FileShare.query.filter_by(id=fid).first()) and file.recipient == current_user.id:
+            from cryptography.hazmat.primitives import serialization, hashes
+            from cryptography.hazmat.primitives.asymmetric import padding
+
+            rsa_private_key = current_user.get_private_rsa_pem(session['my_key'])
+            rsa_private_key = serialization.load_pem_private_key(rsa_private_key, password=None)
+
+            encrypted_key = file.encrypted_key
+
+            key = rsa_private_key.decrypt(encrypted_key, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                                                                      algorithm=hashes.SHA256(), label=None))
+
+            uf: UserFile = UserFile.query.filter_by(id=file.file_id).first()
+
+            salt = uf.salt
+            fernet = get_fernet(get_encryption_key(key, salt))
+
+            fp: Path = current_user.folder / fernet.decrypt(uf.relative_to_upload_dir_path).decode()
+            fn = fernet.decrypt(uf.real_name).decode()
+
+            dk = get_encryption_key(key, salt)
+            df = get_fernet(dk)
+
+            def context():
+                with fp.open('rb') as local_file:
+                    while chunk := local_file.read(172812):  # Always constant!
+                        yield df.decrypt(chunk)
+
+            res = Response(stream_with_context(context()))
+            res.headers['Content-Disposition'] = f'attachment; filename="{fn}"'
+            return res
+
+        else:
+            return abort(403)
+
+    return abort(403)
+
+
+@view.route('/share/<fid>/<rid>')
+@login_required
+def share(fid, rid):
+    from cryptography.hazmat.primitives import serialization, hashes
+    from cryptography.hazmat.primitives.asymmetric import padding
+
+    fernet = get_fernet(session['my_key'])
+
+    fs: FileShare = FileShare(owner=current_user.id, recipient=rid, file_id=fid)
+    mf: UserFile = UserFile.query.filter_by(owner=current_user.id).first()
+    recipient: User = User.query.filter_by(id=rid).first()
+
+    plain_key = fernet.decrypt(mf.key)
+
+    rsa_public_key = serialization.load_pem_public_key(recipient.rsa_public_key)
+    encrypted_key = rsa_public_key.encrypt(plain_key, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                                                                   algorithm=hashes.SHA256(), label=None))
+    fs.encrypted_key = encrypted_key
+
+    db.session.add(fs)
+    db.session.commit()
 
 
 @view.route('/defaultprofilepicture')
 def _dpp():
     return redirect(config.Config.DEFAULT_PROFILE_PICTURE)
+
+
+@view.route('/get-pems')
+@login_required
+def _bruh():
+    key = session['my_key']
+    fernet = get_fernet(key)
+
+    user: User = current_user
+
+    dec_key = fernet.decrypt(user.rsa_decryption_key)
+    dec_fernet = get_fernet(dec_key)
+
+    out = dec_fernet.decrypt(user.rsa_private_key)
+    out += '\n' * 4
+    out += user.rsa_public_key
+
+    res = Response(out)
+    res.headers['Content-Type'] = 'text/plain'
+
+    return res
 
 #################
 #               #

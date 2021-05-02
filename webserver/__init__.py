@@ -5,6 +5,8 @@ from flask_mail import Mail
 
 from .config import Config
 
+from pathlib import Path
+
 db = SQLAlchemy()
 mail = Mail()
 app: Flask = None
@@ -25,13 +27,19 @@ def create_app() -> Flask:
     app.config['SECRET_KEY'] = Config.SECRET_KEY
     app.config['PROJECT_NAME'] = Config.PROJECT_NAME
     app.config['DEFAULT_PROFILE_PICTURE'] = Config.DEFAULT_PROFILE_PICTURE
-    app.config['UPLOAD_PATH'] = Config.UPLOAD_PATH or 'uploads/'
 
     app.config['MAIL_SERVER'] = Config.MAIL_SERVER
     app.config['MAIL_PORT'] = Config.MAIL_PORT
     app.config['MAIL_USE_SSL'] = Config.MAIL_USE_SSL
     app.config['MAIL_USERNAME'] = Config.MAIL_USERNAME
     app.config['MAIL_PASSWORD'] = Config.MAIL_PASSWORD
+
+    if not Config.UPLOAD_PATH:
+        app.config['UPLOAD_PATH'] = Path(app.root_path) / 'uploads/'
+    elif Path(Config.UPLOAD_PATH).is_absolute():
+        app.config['UPLOAD_PATH'] = Config.UPLOAD_PATH
+    else:
+        app.config['UPLOAD_PATH'] = Path(app.root_path) / Config.UPLOAD_PATH
 
     db.init_app(app)
     mail.init_app(app)

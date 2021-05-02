@@ -1,34 +1,46 @@
-import time
+import os
 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from base64 import urlsafe_b64encode, urlsafe_b64decode
 
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization, hashes
+import cryptography.hazmat.primitives.asymmetric.padding as padding
 
-def millis() -> int:
-    return round(time.time() * 1000)
+pem = 'C:\\Users\\4ronse\\Desktop\\key.pem'
 
+private_key = None
 
-def gen_kdf(salt: bytes, ittr: int) -> PBKDF2HMAC:
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA512(),
-        length=32,
-        salt=salt,
-        iterations=ittr,
-        backend=default_backend()
+if os.path.exists(pem):
+    with open(pem, 'rb') as key_file:
+        private_key = serialization.load_pem_private_key(key_file.read(), password=None)
+else:
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=4096
     )
 
-    return kdf
+    pr_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
 
+    with open(pem, 'wb') as key_file:
+        key_file.write(pr_pem)
 
-SALT = b'\xeb\x01\x8e\xc1\xc4T8Q\x1d\xa9.I\xc8\xfa\x05$'
-MATT = b'\xff\x8f\xdd\xc2_9\\\xcf\xe6>K\x00!48N'
+public_key = private_key.public_key()
 
+encrypted = public_key.encrypt(input('Input> ').encode(), padding.OAEP(
+    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+    algorithm=hashes.SHA256(),
+    label=None
+))
 
-if __name__ == '__main__':
-    for ittr in [1, 1024, 4096, 10000, 100000, 250000, 500000, 1000000]:
-        start = millis()
-        kdf = gen_kdf(SALT, ittr)
-        kdf.derive(MATT)
-        print(f'[ittr: {ittr} \t|\t time: {millis() - start}]')
-        time.sleep(1)
+decrypted = private_key.decrypt(encrypted, padding.OAEP(
+    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+    algorithm=hashes.SHA256(),
+    label=None
+))
+
+print(len(encrypted), urlsafe_b64encode(encrypted))
+print(decrypted)
