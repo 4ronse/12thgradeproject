@@ -30,6 +30,7 @@ class User(UserMixin, BaseUserRelatedModel):
     otp_secret = db.Column(db.String(16), nullable=True)
 
     helper_key_salt = db.Column(db.String, nullable=False)
+    file_encryption_key = db.Column(db.String, nullable=False)
 
     rsa_public_key = db.Column(db.String, nullable=False)
     rsa_private_key = db.Column(db.String, nullable=False)
@@ -47,6 +48,8 @@ class User(UserMixin, BaseUserRelatedModel):
 
         self.helper_key_salt = salt = os.urandom(512)
         fernet = get_fernet(get_encryption_key(password, salt))
+
+        self.file_encryption_key = fernet.encrypt(get_encryption_key(os.urandom(512), os.urandom(512)))
 
         rsa_decryption_key_mat = os.urandom(512)
         rsa_decryption_key_salt = os.urandom(512)
@@ -130,6 +133,20 @@ class User(UserMixin, BaseUserRelatedModel):
         # self._generate_new_encryption_key(override=True)
         self._password = generate_password_hash(password=password,
                                                 method='sha256')
+
+    def new_password(self, old_password: str, new_password: str):
+        fernet = get_fernet(get_encryption_key(old_password, self.helper_key_salt))
+        plain_file_encryption_key = fernet.decrypt(self.file_encryption_key)
+        plain_rsa_encryption_key = fernet.decrypt(self.rsa_decryption_key)
+
+        fernet = get_fernet(get_encryption_key(new_password, self.helper_key_salt))
+        encrypted_file_encryption_key = fernet.encrypt(plain_file_encryption_key)
+        encrypted_rsa_encryption_key = fernet.encrypt(plain_rsa_encryption_key)
+
+        self.file_encryption_key = encrypted_file_encryption_key
+        self.rsa_decryption_key = encrypted_rsa_encryption_key
+
+        self.password = new_password
 
     @property
     def has_2fa(self) -> bool:

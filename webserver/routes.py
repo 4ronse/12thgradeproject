@@ -113,6 +113,13 @@ def login():
 
         session['my_key'] = user.get_password_based_pbkdf2_encryption_key(password)
         flash(f'Successfully logged in as {user.name}!', 'success')
+
+        try:
+            if session['2fa_postregister']:
+                session['2fa_postregister'] = None
+                return redirect(url_for('auth.two_factor_auth'))
+        except:
+            pass
         return redirect(url_for('view.index'))
     else:
         return redirect(url_for('view.index'))
@@ -129,6 +136,7 @@ def register():
         password = request.form.get('password')
         profile_picture = request.form.get('profilepic')
         name = request.form.get('name')
+        tfa = True if request.form.get('2fa') else False
 
         errors = []
 
@@ -160,6 +168,9 @@ def register():
                     profile_picture=profile_picture)
         db.session.add(user)
         db.session.commit()
+
+        if tfa:
+            session['2fa_postregister'] = True
 
         flash(f'Successfully registered!', 'success')
         return redirect(url_for('auth.login'))
@@ -226,7 +237,7 @@ def password():
                 'error')
             return redirect(url_for('auth.password'))
 
-        current_user.password = new_password
+        current_user.new_password(current_password, new_password)
         db.session.commit()
 
         session['my_key'] = current_user.get_password_based_pbkdf2_encryption_key(new_password)
@@ -416,7 +427,8 @@ def upload():
         file: FileStorage
 
         fernet = get_fernet(session['my_key'])
-        fernet = get_fernet(fernet.decrypt(current_user.helper_key))
+
+        fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))
 
         key, salt = os.urandom(128), os.urandom(512)
         encrypted_key = fernet.encrypt(key)
@@ -471,6 +483,7 @@ def download(fid):
         if not current_user.is_anonymous:
             if (file := UserFile.query.filter_by(id=fid).first()) and file.owner == current_user.id:
                 fernet = get_fernet(session['my_key'])
+                fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))
                 key = fernet.decrypt(file.key)
                 return get_decrypted_file(file, key)
 
@@ -493,6 +506,7 @@ def download(fid):
             else:
                 return abort(403)
     except Exception as e:
+        raise
         from cryptography.fernet import InvalidToken
         from sys import stderr
         if not issubclass(type(e), InvalidToken):
