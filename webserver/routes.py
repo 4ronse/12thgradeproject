@@ -169,14 +169,16 @@ def register():
 
 @auth.route('/logout', methods=['GET', 'POST'])
 @login_required
-def logout():
+def logout():  # I wonder
     logout_user()
+    session.clear()
     return redirect(url_for('view.index'))
 
 
 @auth.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
+    """ Profile route waypoint """
     if request.method == 'GET':
         return render_template('auth/profile.html')
     elif request.method == 'POST':
@@ -198,7 +200,7 @@ def profile():
 
         db.session.commit()
 
-        flash(f'Successfully commited changes!', 'success')
+        flash(f'Successfully committed changes!', 'success')
         return redirect(url_for('auth.profile'))
     else:
         return render_template('auth/profile.html')
@@ -207,6 +209,7 @@ def profile():
 @auth.route('/profile/password', methods=['GET', 'POST'])
 @login_required
 def password():
+    """ Password change route """
     if request.method == 'GET':
         return render_template('auth/password.html')
     elif request.method == 'POST':
@@ -226,6 +229,7 @@ def password():
         current_user.password = new_password
         db.session.commit()
 
+        session['my_key'] = current_user.get_password_based_pbkdf2_encryption_key(new_password)
         flash('Successfully changed password!', 'success')
         return redirect(url_for('auth.profile'))
 
@@ -247,7 +251,7 @@ def two_factor_auth_qr():
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
-    }
+    }  # Due to TOTP being very important, no data can be cached for later use.
 
 
 @auth.route('/profile/enable2fa', methods=['GET'])
@@ -412,6 +416,7 @@ def upload():
         file: FileStorage
 
         fernet = get_fernet(session['my_key'])
+        fernet = get_fernet(fernet.decrypt(current_user.helper_key))
 
         key, salt = os.urandom(128), os.urandom(512)
         encrypted_key = fernet.encrypt(key)
@@ -435,69 +440,64 @@ def upload():
         db.session.add(userfile)
     db.session.commit()
 
-    return 'OK'
+    return Response('OK', status=201, mimetype='text/plain')
+
+
+def get_decrypted_file(file: UserFile, key: bytes) -> Response:
+    salt = file.salt
+    fernet = get_fernet(get_encryption_key(key, salt))
+
+    fp: Path = current_user.folder / fernet.decrypt(file.relative_to_upload_dir_path).decode()
+    fn = fernet.decrypt(file.real_name).decode()
+
+    dk = get_encryption_key(key, salt)
+    df = get_fernet(dk)
+
+    def context():
+        with fp.open('rb') as local_file:
+            while chunk := local_file.read(172812):  # Always constant!
+                yield df.decrypt(chunk)
+
+    res = Response(stream_with_context(context()))
+    res.headers['Content-Disposition'] = f'attachment; filename="{fn}"'
+    return res
 
 
 @view.route('/download/<fid>', methods=['GET'])
 def download(fid):
     fid = uuid.UUID(fid)
 
-    if not current_user.is_anonymous:
-        fernet = get_fernet(session['my_key'])
-        if (file := UserFile.query.filter_by(id=fid).first()) and file.owner == current_user.id:
-            key = fernet.decrypt(file.key)
-            salt = file.salt
-            fernet = get_fernet(get_encryption_key(key, salt))
+    try:
+        if not current_user.is_anonymous:
+            if (file := UserFile.query.filter_by(id=fid).first()) and file.owner == current_user.id:
+                fernet = get_fernet(session['my_key'])
+                key = fernet.decrypt(file.key)
+                return get_decrypted_file(file, key)
 
-            fp: Path = current_user.folder / fernet.decrypt(file.relative_to_upload_dir_path).decode()
-            fn = fernet.decrypt(file.real_name).decode()
+            elif (file := FileShare.query.filter_by(id=fid).first()) and file.recipient == current_user.id:
+                from cryptography.hazmat.primitives import serialization, hashes
+                from cryptography.hazmat.primitives.asymmetric import padding
 
-            dk = get_encryption_key(key, salt)
-            df = get_fernet(dk)
+                rsa_private_key = current_user.get_private_rsa_pem(session['my_key'])
+                rsa_private_key = serialization.load_pem_private_key(rsa_private_key, password=None)
 
-            def context():
-                with fp.open('rb') as local_file:
-                    while chunk := local_file.read(172812):  # Always constant!
-                        yield df.decrypt(chunk)
+                encrypted_key = file.encrypted_key
 
-            res = Response(stream_with_context(context()))
-            res.headers['Content-Disposition'] = f'attachment; filename="{fn}"'
-            return res
+                key = rsa_private_key.decrypt(encrypted_key, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                                                                          algorithm=hashes.SHA256(), label=None))
 
-        elif (file := FileShare.query.filter_by(id=fid).first()) and file.recipient == current_user.id:
-            from cryptography.hazmat.primitives import serialization, hashes
-            from cryptography.hazmat.primitives.asymmetric import padding
+                uf: UserFile = UserFile.query.filter_by(id=file.file_id).first()
 
-            rsa_private_key = current_user.get_private_rsa_pem(session['my_key'])
-            rsa_private_key = serialization.load_pem_private_key(rsa_private_key, password=None)
+                return get_decrypted_file(uf, key)
 
-            encrypted_key = file.encrypted_key
-
-            key = rsa_private_key.decrypt(encrypted_key, padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                                                                      algorithm=hashes.SHA256(), label=None))
-
-            uf: UserFile = UserFile.query.filter_by(id=file.file_id).first()
-
-            salt = uf.salt
-            fernet = get_fernet(get_encryption_key(key, salt))
-
-            fp: Path = current_user.folder / fernet.decrypt(uf.relative_to_upload_dir_path).decode()
-            fn = fernet.decrypt(uf.real_name).decode()
-
-            dk = get_encryption_key(key, salt)
-            df = get_fernet(dk)
-
-            def context():
-                with fp.open('rb') as local_file:
-                    while chunk := local_file.read(172812):  # Always constant!
-                        yield df.decrypt(chunk)
-
-            res = Response(stream_with_context(context()))
-            res.headers['Content-Disposition'] = f'attachment; filename="{fn}"'
-            return res
-
-        else:
-            return abort(403)
+            else:
+                return abort(403)
+    except Exception as e:
+        from cryptography.fernet import InvalidToken
+        from sys import stderr
+        if not issubclass(type(e), InvalidToken):
+            print(e, file=stderr)
+        return abort(403)
 
     return abort(403)
 
@@ -549,6 +549,17 @@ def _bruh():
     res.headers['Content-Type'] = 'text/plain'
 
     return res
+
+
+# NO CACHE due to development
+from . import app
+
+
+@app.after_request
+def add_header(response: Response):
+    response.cache_control.max_age = 0
+    response.cache_control.no_store = True
+    return response
 
 #################
 #               #

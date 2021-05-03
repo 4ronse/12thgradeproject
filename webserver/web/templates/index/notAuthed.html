@@ -1,0 +1,28 @@
+<div class="row" style="min-height: 100%; min-height: 85vh; display: flex; align-items: center">
+    <div class="col-md-6 col-sm-12">
+        <h1 style="font-size: 5rem; width: fit-content; height: auto"> Welcome! </h1>
+        <div style="width: 98%">
+            <span style="font-size: 1.5rem; overflow: auto">
+                Save your files, documents, photos and videos
+                to NAGDR and access them from anywhere, on every device
+                that is able to browse the internet!
+            </span>
+        </div>
+
+        <div class="pt-4">
+            <div class="row py-2 justify-content-center">
+                <a class="btn btn-primary p-3 w-50" href="{{ url_for('auth.register') }}" role="button"> Start using NADGR </a>
+            </div>
+
+            <div class="separator"> OR </div>
+
+            <div class="row py-2 justify-content-center">
+                <a class="btn btn-outline-primary p-3 w-50" href="{{ url_for('auth.login') }}" role="button"> Login to NADGR </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-sm-12">
+        <img src="{{ url_for('view._dpp') }}" style="height: 100%; width: 100%" alt="amogus">
+    </div>
+</div>

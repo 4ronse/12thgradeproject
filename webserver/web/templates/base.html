@@ -90,39 +90,33 @@
   </nav>
   <!-- NavBar End -->
 
-  {% with successes = get_flashed_messages(category_filter=['success']) %}
-  {% if successes %}
-  {%- for msg in successes %}
-  <div class="alert alert-success alert-dismissible fade show m-4">
-    <p> {{ msg }} </p>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-  {% endfor -%}
-  {% endif %}
-  {% endwith %}
+  <div id="flashes-container">
+    <script>
+      {% with successes = get_flashed_messages(category_filter=['success']) %}
+      {% if successes %}
+      {%- for msg in successes %}
+      flash(`{{ msg }}`, 'success', 5000);
+      {% endfor -%}
+      {% endif %}
+      {% endwith %}
 
-  {% with warns = get_flashed_messages(category_filter=['warn']) %}
-  {% if warns %}
-  {%- for msg in warns %}
-  <div class="alert alert-warning alert-dismissible fade show m-4">
-    <p> {{ msg }} </p>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-  </div>
-  {% endfor -%}
-  {% endif %}
-  {% endwith %}
+      {% with warns = get_flashed_messages(category_filter=['warn']) %}
+      {% if warns %}
+      {%- for msg in warns %}
+      flash(`{{ msg }}`, 'warning', 10000);
+      {% endfor -%}
+      {% endif %}
+      {% endwith %}
 
-  {% with errors = get_flashed_messages(category_filter=['error']) %}
-  {% if errors %}
-  {%- for msg in errors %}
-  <div class="alert alert-danger alert-dismissible fade show m-4">
-    <p> {{ msg }} </p>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      {% with errors = get_flashed_messages(category_filter=['error']) %}
+      {% if errors %}
+      {%- for msg in errors %}
+      flash(`{{ msg }}`, 'danger');
+      {% endfor -%}
+      {% endif %}
+      {% endwith %}
+    </script>
   </div>
-  {% endfor -%}
-
-  {% endif %}
-  {% endwith %}
 
   <div class="container my-4">
     <div class="row">

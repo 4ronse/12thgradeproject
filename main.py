@@ -1,14 +1,10 @@
-"""
-TODO: Implement my own Validator | Perhaps use WTForms (when I actually understand what it is)
-"""
+from flask import Flask
+
 import webserver
 import sys
 
-app = webserver.create_app()
+app: Flask = webserver.create_app()
 
 if __name__ == '__main__':
-    debug = '-debug' in sys.argv or webserver.Config.DEBUG
-    ssl_context = None if '-nossl' in sys.argv or webserver.Config.NO_SSL else (
-        'cert.crt, key.pem')
-
-    app.run(debug=debug, ssl_context=ssl_context)
+    print(app.root_path)
+    app.run(debug=1, host='0.0.0.0')
