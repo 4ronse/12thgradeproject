@@ -1,3 +1,5 @@
+'use strict';
+
 let flash_before_load = [];
 
 let flash = (msg, t, time = -1) => {
@@ -33,4 +35,66 @@ window.addEventListener('load', (e) => {
     };
 
     flash_before_load.forEach((f) => {flash(f[0], f[1], f[2])});
+
+    {
+        const dropzone = document.getElementById('file-dropzone');
+
+        if(dropzone != null) {
+
+            let preventDefault = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            let upload = (file) => {
+                const url = '/upload';
+                let formData = new FormData();
+                let xhr = new XMLHttpRequest();
+                xhr.open('POST', url, true);
+
+                xhr.upload.addEventListener("progress", (e) => {
+                    console.log(e, e.loaded * 100.0 / e.total)
+                });
+
+                xhr.addEventListener("readystatechange", (e) => {
+                    if(xhr.readyState === 4 && xhr.status === 201) console.log("Done!");
+                    else if(xhr.readyState === 4 && xhr.status !== 201) console.error(e, xhr);
+                });
+
+                xhr.addEventListener("error", (e) => console.log(e))
+
+                file.file((f) => {
+                    console.log(f, file)
+                    formData.append('file', f, file.fullPath.substr(1));
+                    xhr.send(formData);
+                });
+
+            }
+
+            let uploadDir = (dir) => {
+                let dirReader = dir.createReader();
+                dirReader.readEntries((entries) => {
+                    [...entries].forEach((entry) => {
+                        if(entry.isFile) upload(entry);
+                        else if(entry.isDirectory) uploadDir(entry);
+                    });
+                });
+                // console.log(dirReader)
+            }
+
+            dropzone.ondragenter = preventDefault;
+            dropzone.ondragover = preventDefault;
+
+            dropzone.ondrop = (e) => {
+                preventDefault(e);
+
+                [...e.dataTransfer.items].forEach((item) => {
+                    item = item.webkitGetAsEntry();
+                    console.log(item)
+                    if(item.isFile) upload(item);
+                    else if(item.isDirectory) uploadDir(item);
+                })
+            }
+        }
+    }
 });

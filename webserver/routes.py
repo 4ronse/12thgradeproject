@@ -403,6 +403,71 @@ def make_tree(path):
     return tree
 
 
+def get_user_file_tree_own(user: User):
+    user_files: list[UserFile] = UserFile.query.filter_by(owner=user.id).all()
+    root = dict(name='/', children=[])
+
+    for file in user_files:
+        fernet = get_fernet(session['my_key'])
+        fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))
+        fernet = get_fernet(get_encryption_key(fernet.decrypt(file.key), file.salt))
+        fn = fernet.decrypt(file.real_name).decode().split('/')
+        ptr = root
+
+        while len(fn) > 1:
+            continue_flag = False
+            for c in ptr['children']:
+                if type(c) == dict and c['name'] == fn[0]:
+                    ptr = c
+                    fn = fn[1:]
+                    continue_flag = True
+                    break
+
+            if continue_flag:
+                continue
+
+            n = dict(name=fn[0], children=[])
+            ptr['children'].append(n)
+            ptr = n
+            fn = fn[1:]
+        ptr['children'].append(fn[0])
+
+    return root
+
+
+@view.route('/tree')
+@login_required
+def _tree():
+    # get_user_file_tree_own(current_user)
+    from json import dumps
+    return dumps(get_user_file_tree_own(current_user))
+
+
+@view.route('/tree/<path:path>', methods=['GET'])
+@login_required
+def _tree_path(path: str):
+    tree = get_user_file_tree_own(current_user)
+    ptr = tree
+    path = (path[:-1] if path.endswith('/') else path).split('/')
+    try:
+        while len(path) > 0:
+            continue_flag = False
+            for c in ptr['children']:
+                if type(c) == dict and c['name'] == path[0]:
+                    ptr = c
+                    path = path[1:]
+                    continue_flag = True
+                    break
+
+            if continue_flag:
+                continue
+            else:
+                abort(404)
+    except:
+        return abort(404)
+
+    return str(ptr)
+
 @view.route('/')
 def index():
     if current_user.is_authenticated and not current_user.has_2fa:
@@ -420,6 +485,7 @@ def upload():
         p.mkdir(exist_ok=True)
 
     from . import app
+    from hashlib import sha256
 
     files = request.files.getlist('file')
 
@@ -438,7 +504,7 @@ def upload():
         from uuid import uuid4
         userfile: UserFile = UserFile(id=uuid4(), owner=current_user.id,
                                       real_name=fernet.encrypt(file.filename.encode()),
-                                      key=encrypted_key, salt=salt)
+                                      hashed_name=sha256(file.filename.encode()).hexdigest(), key=encrypted_key, salt=salt)
 
         path: Path = current_user.folder / ('%.32x' % userfile.id.int)
         relative_path = path.relative_to(Path(app.config['UPLOAD_PATH']) / f'{current_user.id}')
