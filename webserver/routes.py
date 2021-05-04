@@ -468,6 +468,7 @@ def _tree_path(path: str):
 
     return str(ptr)
 
+
 @view.route('/')
 def index():
     if current_user.is_authenticated and not current_user.has_2fa:
