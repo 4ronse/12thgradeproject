@@ -8,6 +8,11 @@ body {
     color: var(--text-color);
 }
 
+#file-dropzone {
+    min-width: 100%;
+    min-height: 400px;
+}
+
 .card {
     color: #212529;
 }

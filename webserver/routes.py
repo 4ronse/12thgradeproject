@@ -505,7 +505,8 @@ def upload():
         from uuid import uuid4
         userfile: UserFile = UserFile(id=uuid4(), owner=current_user.id,
                                       real_name=fernet.encrypt(file.filename.encode()),
-                                      hashed_name=sha256(file.filename.encode()).hexdigest(), key=encrypted_key, salt=salt)
+                                      hashed_name=sha256(file.filename.encode()).hexdigest(), key=encrypted_key,
+                                      salt=salt)
 
         path: Path = current_user.folder / ('%.32x' % userfile.id.int)
         relative_path = path.relative_to(Path(app.config['UPLOAD_PATH']) / f'{current_user.id}')
@@ -544,17 +545,21 @@ def get_decrypted_file(file: UserFile, key: bytes) -> Response:
 
 @view.route('/download/<fid>', methods=['GET'])
 def download(fid):
-    fid = uuid.UUID(fid)
-
     try:
         if not current_user.is_anonymous:
-            if (file := UserFile.query.filter_by(id=fid).first()) and file.owner == current_user.id:
+            if (file := UserFile.query.filter_by(hashed_name=fid).first()) and file.owner == current_user.id:
                 fernet = get_fernet(session['my_key'])
                 fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))
                 key = fernet.decrypt(file.key)
                 return get_decrypted_file(file, key)
 
-            elif (file := FileShare.query.filter_by(id=fid).first()) and file.recipient == current_user.id:
+            elif (file := UserFile.query.filter_by(id=uuid.UUID(fid)).first()) and file.owner == current_user.id:
+                fernet = get_fernet(session['my_key'])
+                fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))
+                key = fernet.decrypt(file.key)
+                return get_decrypted_file(file, key)
+
+            elif (file := FileShare.query.filter_by(id=uuid.UUID(fid)).first()) and file.recipient == current_user.id:
                 from cryptography.hazmat.primitives import serialization, hashes
                 from cryptography.hazmat.primitives.asymmetric import padding
 
