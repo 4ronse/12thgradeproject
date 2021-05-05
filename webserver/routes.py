@@ -597,7 +597,9 @@ def download_post():
     files: list[UserFile] = []
     zip_path: Path = Path(app.config['TEMP_PATH']) / (str(random_uuid) + '.zip')
 
-    if len(file_names) == 1:
+    if len(file_names) == 0:
+        return abort(403)
+    elif len(file_names) == 1:
         return download(file_names[0])
 
     for file_name in file_names:
@@ -631,7 +633,15 @@ def download_post():
                     zf.writestr('test/' + fn, local_file_tmp.read())
                 os.remove(str(tmp.absolute()))
 
-    return abort(403)
+    def context():
+        with zip_path.open('rb') as zf:
+            while chunk := zf.read(172812):  # Always constant!
+                yield chunk
+        os.remove(str(zip_path.absolute()))
+
+    res = Response(stream_with_context(context()))
+    res.headers['Content-Disposition'] = f'attachment; filename="{zip_path.name}"'
+    return res
 
 
 @view.route('/share/<fid>/<rid>')
