@@ -67,8 +67,7 @@ LocationChangeEvent.addEventHandler((_tree) => {
     container.innerHTML = '';
 
     if(_tree !== tree) {
-        let parent = _tree.parent;
-        parent.name = '../'
+        let parent = new Directory('../');
         let div = parent.getDiv();
         div.setAttribute('data-type', 'parent');
 
@@ -84,4 +83,45 @@ LocationChangeEvent.addEventHandler((_tree) => {
         div.addEventListener('dblclick', doubleClickHandler);
         div.addEventListener('click', singleClickHandler);
     });
-})
+});
+
+const download = () => {
+    const selected = document.querySelectorAll('.selected');
+    let files = [];
+
+    function getDirectoryFiles(loc) {
+        let files = [];
+
+        loc.children.forEach(child => {
+            if(child.isFile) files.push(child.SHA256);
+            else if(child.isDirectory) files = files.concat(getDirectoryFiles(child));
+        });
+
+        return files;
+    }
+
+    selected.forEach(selected => {
+        if(selected.getAttribute('data-type') === 'file')
+            files.push(selected.getAttribute('data-hashed-file-name'));
+        else if(selected.getAttribute('data-type') === 'directory')
+            files = files.concat(getDirectoryFiles(current.get(selected.getAttribute('data-name'))));
+    });
+
+    let form = document.createElement('form');
+    form.action = '/download';
+    form.method = 'post';
+    form.target = '_blank';
+
+    let hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = 'files';
+    hidden.value = files.join(';');
+
+    form.appendChild(hidden);
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    return files;
+}

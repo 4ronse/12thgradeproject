@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title> {% block title %} NOT A Google Ripoff! {% endblock %} </title>
+  <title> {% block title %} {{ config['PROJECT_NAME'] }} {% endblock %} </title>
   <meta name="description" content="Bruh">
   <meta name="author" content="4ronse">
 
@@ -120,7 +120,7 @@
   </div>
 
   <div class="container my-4">
-    <div class="row">
+    <div class="row justify-content-center">
       {% block content %} {% endblock %}
     </div>
   </div>

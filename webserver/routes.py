@@ -587,6 +587,24 @@ def download(fid):
     return abort(403)
 
 
+@view.route('/download', methods=['POST'])
+def download_post():
+    import zipfile
+    random_uuid = uuid.uuid4()
+
+    file_names: str = request.form.get('files')
+    file_names: list[str] = file_names.split(';')
+    files: list[UserFile] = []
+
+    for file_name in file_names:
+        files.append(UserFile.query.filter_by(owner=current_user.id, hashed_name=file_name))
+
+    with zipfile.ZipFile('', 'w') as zf:
+        pass
+
+    return abort(403)
+
+
 @view.route('/share/<fid>/<rid>')
 @login_required
 def share(fid, rid):

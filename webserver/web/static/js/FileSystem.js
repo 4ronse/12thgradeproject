@@ -116,9 +116,10 @@ function SHA256(s) {
 }
 
 class FSEntry {
-    constructor(name, parent) {
+    constructor(name, parent, image) {
         this.name = name;
         this.parent = parent;
+        this.image = image;
     }
 
     getDiv() {
@@ -145,8 +146,12 @@ class FSEntry {
 
         image.alt = 'FileIcon';
 
-        image.src = '/defaultprofilepicture';
+        image.src = this.image;
         span.innerHTML = this.name;
+
+        image.onerror = () => {
+            image.src = '/static/img/ico/bin.svg';
+        }
 
         container.appendChild(card);
         card.appendChild(cardBody);
@@ -171,10 +176,9 @@ class FSEntry {
 
 class Directory extends FSEntry {
     constructor(name, children = [], parent = null) {
-        super(name, parent);
+        super(name, parent, '/static/img/ico/directory.svg');
         this.children = children;
         children.forEach((child) => this.addChild(child));
-
     }
 
     get(what) {
@@ -220,6 +224,7 @@ class File extends FSEntry {
 
     constructor(name, parent) {
         super(name, parent);
+        this.image = `/static/img/ico/${this.extension}.svg`;
     }
 
     getFullPath() {
