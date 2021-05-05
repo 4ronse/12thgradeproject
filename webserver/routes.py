@@ -606,7 +606,6 @@ def download_post():
         files.append(UserFile.query.filter_by(owner=current_user.id, hashed_name=file_name).first())
 
     mkdirs(zip_path.parent)
-    print(files)
 
     with zipfile.ZipFile(str(zip_path.absolute()), 'w') as zf:
         while len(files) > 0 and (file := files.pop()):
@@ -619,8 +618,6 @@ def download_post():
             fp: Path = current_user.folder / fernet.decrypt(file.relative_to_upload_dir_path).decode()
             fn = fernet.decrypt(file.real_name).decode()
 
-            print(fn)
-
             dk = get_encryption_key(key, salt)
             df = get_fernet(dk)
 
@@ -630,7 +627,7 @@ def download_post():
                     while chunk := local_file.read(172812):  # Always constant!
                         local_file_tmp.write(df.decrypt(chunk))
                     local_file_tmp.seek(0)
-                    zf.writestr('test/' + fn, local_file_tmp.read())
+                    zf.writestr(fn, local_file_tmp.read())
                 os.remove(str(tmp.absolute()))
 
     def context():

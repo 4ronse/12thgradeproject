@@ -101,10 +101,8 @@ const download = () => {
     }
 
     selected.forEach(selected => {
-        if(selected.getAttribute('data-type') === 'file') {
+        if(selected.getAttribute('data-type') === 'file')
             files.push(selected.getAttribute('data-hashed-file-name'));
-            console.log(selected)
-        }
         else if(selected.getAttribute('data-type') === 'directory')
             files = files.concat(getDirectoryFiles(current.get(selected.getAttribute('data-name'))));
     });

@@ -240,9 +240,7 @@ class File extends FSEntry {
     }
 
     get SHA256() {
-        let res = SHA256(this.getFullPath());
-        console.log(this.getFullPath(), res)
-        return res;
+        return SHA256(this.getFullPath());
     }
 
     getDiv() {
