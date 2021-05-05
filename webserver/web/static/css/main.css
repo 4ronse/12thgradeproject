@@ -13,6 +13,8 @@ body {
     min-height: 400px;
 }
 
+{}
+
 .card {
     color: #212529;
 }
@@ -78,6 +80,24 @@ div.profile-sep {
     top: 50%;
     left: 50%;
     transform: translate(-50% , -50%);
+}
+
+.item > .card {
+    transition: 0.1s linear all;
+    background-color: var(--text-color);
+
+    pointer-events: none;
+
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select:none;
+    user-select:none;
+}
+
+.item.selected > .card {
+    transition: 0.1s linear all;
+    background-color: rgba(13, 202, 240, 0.32);
+    color: #f8f9fa;
 }
 
 .loading-spinner div {

@@ -155,6 +155,7 @@ class FSEntry {
         textContainer.appendChild(span);
 
         container.setAttribute('data-type', (this.isFile ? 'file' : (this.isDirectory ? 'directory' : 'undefined')))
+        container.setAttribute('data-name', this.name)
 
         return container;
     }

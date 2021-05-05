@@ -578,7 +578,6 @@ def download(fid):
             else:
                 return abort(403)
     except Exception as e:
-        raise
         from cryptography.fernet import InvalidToken
         from sys import stderr
         if not issubclass(type(e), InvalidToken):
