@@ -22,3 +22,4 @@ class Config:
     MAIL_PASSWORD = getenv('MAIL_PASSWORD')
 
     UPLOAD_PATH = getenv('UPLOAD_PATH') or None
+    TEMP_PATH = getenv('TEMP_PATH') or None

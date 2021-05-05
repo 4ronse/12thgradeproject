@@ -32,6 +32,11 @@ storage = Blueprint('storage', __name__, static_folder="web/static")
 #     UTILS     #
 #               #
 #################
+def mkdirs(p: Path):
+    if p.parent and not p.parent.exists():
+        mkdirs(p.parent)
+    p.mkdir(exist_ok=True)
+
 def login_pointless(func, view='view.index'):
     """
     Routes decorated with this will ensure that the client
@@ -480,11 +485,6 @@ def index():
 @view.route('/upload', methods=['POST'])
 @login_required
 def upload():
-    def mkdirs(p: Path):
-        if p.parent and not p.parent.exists():
-            mkdirs(p.parent)
-        p.mkdir(exist_ok=True)
-
     from . import app
     from hashlib import sha256
 
@@ -523,7 +523,7 @@ def upload():
     return Response('OK', status=201, mimetype='text/plain')
 
 
-def get_decrypted_file(file: UserFile, key: bytes) -> Response:
+def get_decrypted_file_response(file: UserFile, key: bytes) -> Response:
     salt = file.salt
     fernet = get_fernet(get_encryption_key(key, salt))
 
@@ -551,13 +551,13 @@ def download(fid):
                 fernet = get_fernet(session['my_key'])
                 fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))
                 key = fernet.decrypt(file.key)
-                return get_decrypted_file(file, key)
+                return get_decrypted_file_response(file, key)
 
             elif (file := UserFile.query.filter_by(id=uuid.UUID(fid)).first()) and file.owner == current_user.id:
                 fernet = get_fernet(session['my_key'])
                 fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))
                 key = fernet.decrypt(file.key)
-                return get_decrypted_file(file, key)
+                return get_decrypted_file_response(file, key)
 
             elif (file := FileShare.query.filter_by(id=uuid.UUID(fid)).first()) and file.recipient == current_user.id:
                 from cryptography.hazmat.primitives import serialization, hashes
@@ -573,7 +573,7 @@ def download(fid):
 
                 uf: UserFile = UserFile.query.filter_by(id=file.file_id).first()
 
-                return get_decrypted_file(uf, key)
+                return get_decrypted_file_response(uf, key)
 
             else:
                 return abort(403)
@@ -595,12 +595,41 @@ def download_post():
     file_names: str = request.form.get('files')
     file_names: list[str] = file_names.split(';')
     files: list[UserFile] = []
+    zip_path: Path = Path(app.config['TEMP_PATH']) / (str(random_uuid) + '.zip')
+
+    if len(file_names) == 1:
+        return download(file_names[0])
 
     for file_name in file_names:
-        files.append(UserFile.query.filter_by(owner=current_user.id, hashed_name=file_name))
+        files.append(UserFile.query.filter_by(owner=current_user.id, hashed_name=file_name).first())
 
-    with zipfile.ZipFile('', 'w') as zf:
-        pass
+    mkdirs(zip_path.parent)
+    print(files)
+
+    with zipfile.ZipFile(str(zip_path.absolute()), 'w') as zf:
+        while len(files) > 0 and (file := files.pop()):
+            fernet = get_fernet(session['my_key'])
+            fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))
+            key = fernet.decrypt(file.key)
+            salt = file.salt
+            fernet = get_fernet(get_encryption_key(key, salt))
+
+            fp: Path = current_user.folder / fernet.decrypt(file.relative_to_upload_dir_path).decode()
+            fn = fernet.decrypt(file.real_name).decode()
+
+            print(fn)
+
+            dk = get_encryption_key(key, salt)
+            df = get_fernet(dk)
+
+            with fp.open('rb') as local_file:
+                tmp = zip_path.parent / (str(random_uuid) + '.tmp')
+                with tmp.open('wb+') as local_file_tmp:
+                    while chunk := local_file.read(172812):  # Always constant!
+                        local_file_tmp.write(df.decrypt(chunk))
+                    local_file_tmp.seek(0)
+                    zf.writestr('test/' + fn, local_file_tmp.read())
+                os.remove(str(tmp.absolute()))
 
     return abort(403)
 

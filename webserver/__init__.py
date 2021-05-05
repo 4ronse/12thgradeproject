@@ -41,6 +41,13 @@ def create_app() -> Flask:
     else:
         app.config['UPLOAD_PATH'] = Path(app.root_path) / Config.UPLOAD_PATH
 
+    if not Config.TEMP_PATH:
+        app.config['TEMP_PATH'] = Path(app.root_path) / 'temp/'
+    elif Path(Config.UPLOAD_PATH).is_absolute():
+        app.config['TEMP_PATH'] = Config.TEMP_PATH
+    else:
+        app.config['TEMP_PATH'] = Path(app.root_path) / Config.TEMP_PATH
+
     db.init_app(app)
     mail.init_app(app)
 

@@ -232,15 +232,17 @@ class File extends FSEntry {
         let ptr = this.parent;
 
         while (ptr !== null) {
-            path = ptr.name + path;
+            path = ptr.name + '/' + path;
             ptr = ptr.parent;
         }
 
-        return path + `/${this.name}`;
+        return (path + `${this.name}`).substr(2);
     }
 
     get SHA256() {
-        return SHA256(this.name);
+        let res = SHA256(this.getFullPath());
+        console.log(this.getFullPath(), res)
+        return res;
     }
 
     getDiv() {
