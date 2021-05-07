@@ -23,10 +23,6 @@ function load_tree() {
         }).catch((e) => console.error(e));
 }
 
-window.addEventListener('load', () => {
-    load_tree();
-});
-
 const singleClickHandler = (e) => {
     const target = e.currentTarget;
 
@@ -85,7 +81,7 @@ LocationChangeEvent.addEventHandler((_tree) => {
     });
 });
 
-const download = () => {
+const getAllSelected = () => {
     const selected = document.querySelectorAll('.selected');
     let files = [];
 
@@ -107,17 +103,37 @@ const download = () => {
             files = files.concat(getDirectoryFiles(current.get(selected.getAttribute('data-name'))));
     });
 
+    return files;
+}
+
+const make_form = (data, content) => {
+    console.assert(data.hasOwnProperty('action'), 'Action must be given');
+    if(!data.hasOwnProperty('method')) data['method'] = 'POST';
+    if(!data.hasOwnProperty('target')) data['target'] = '_blank';
+
+
     let form = document.createElement('form');
-    form.action = '/download';
-    form.method = 'post';
-    form.target = '_blank';
+    form.action = data['action'];
+    form.method = data['method'];
+    form.target = data['target'];
 
-    let hidden = document.createElement('input');
-    hidden.type = 'hidden';
-    hidden.name = 'files';
-    hidden.value = files.join(';');
+    Object.entries(content).forEach(([k, v]) => {
+        let hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = k;
+        hidden.value = v;
+        form.appendChild(hidden);
+    });
 
-    form.appendChild(hidden);
+    return form;
+}
+
+const delete_files = () => {
+    const files = getAllSelected();
+
+    const form = make_form({'action': '/delete'}, {
+        'files': files.join(';')
+    });
 
     document.body.appendChild(form);
     form.submit();
@@ -125,3 +141,53 @@ const download = () => {
 
     return files;
 }
+
+const download = () => {
+    const files = getAllSelected();
+
+    const form = make_form({'action': '/download'}, {
+        'files': files.join(';')
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    return files;
+}
+
+
+window.addEventListener('load', () => {
+    load_tree();
+
+    let contextMenu = new ContextMenu();
+
+    contextMenu.onmenu = (m, e) => {
+        const selected = getAllSelected();
+
+        if(selected.length === 0) {
+            e.returnValue = true;
+            return m.hide();
+        }
+    };
+
+    contextMenu.addItem(new ContextMenuItem({
+        text: 'Download',
+        icon: {
+            name: 'fa-download',
+            style: 'fas'
+        },
+        onclick: download
+    }));
+
+    contextMenu.addItem(new ContextMenuItem({
+        text: 'Delete',
+        icon: {
+            name: 'fa-trash-alt',
+            style: 'fas'
+        },
+        onclick: delete_files
+    }));
+
+    contextMenu.import();
+});

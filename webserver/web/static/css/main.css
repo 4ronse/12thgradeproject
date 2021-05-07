@@ -197,3 +197,42 @@ div.profile-sep {
         transform: rotate(360deg);
     }
 }
+
+#context-menu {
+    position: fixed;
+    z-index: 9999999;
+
+    width: 18rem;
+    padding: 3px;
+
+    background-color: #212529;
+
+    transform: scale(0);
+    transform-origin: top left;
+    transition: 0.1s ease-in-out;
+
+    border-radius: .25rem;
+}
+
+#context-menu.active {
+    transform: scale(1);
+    transition: 0.1s ease-in-out;
+}
+
+#context-menu > .context-menu-item {
+    padding: 0.2rem 0.5rem;
+    font-size: 1.2rem;
+    color: #E1E1E1FF;
+
+    cursor: default;
+    pointer-events: visible;
+}
+
+#context-menu > .context-menu-item:hover {
+    background: rgba(199, 212, 222, 0.49);
+}
+
+#context-menu > .context-menu-item i {
+    display: inline-block;
+    margin-right: 0.4rem;
+}

@@ -37,6 +37,7 @@ def mkdirs(p: Path):
         mkdirs(p.parent)
     p.mkdir(exist_ok=True)
 
+
 def login_pointless(func, view='view.index'):
     """
     Routes decorated with this will ensure that the client
@@ -585,6 +586,34 @@ def download(fid):
         return abort(403)
 
     return abort(403)
+
+
+@view.route('/delete', methods=['POST'])
+def delete_post():
+    file_names: str = request.form.get('files')
+    file_names: list[str] = file_names.split(';')
+    files: list[UserFile] = []
+
+    if len(file_names) == 0:
+        return 'OK'
+
+    for file_name in file_names:
+        files.append(UserFile.query.filter_by(owner=current_user.id, hashed_name=file_name).first())
+
+    for file in files:
+        fernet = get_fernet(session['my_key'])
+        fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))
+        key = fernet.decrypt(file.key)
+        salt = file.salt
+        fernet = get_fernet(get_encryption_key(key, salt))
+
+        fp: Path = current_user.folder / fernet.decrypt(file.relative_to_upload_dir_path).decode()
+
+        os.remove(str(fp.absolute()))
+        db.session.delete(file)
+    db.session.commit()
+
+    return 'OK'
 
 
 @view.route('/download', methods=['POST'])
