@@ -7,7 +7,65 @@ let flash = (msg, t, time = -1) => {
     flash_before_load.push([msg, t, time]);
 };
 
+function setCookie(name,value,days) {
+    var expires = "";
+    if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
+
+function getCookie(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(';');
+    for(var i=0;i < ca.length;i++) {
+        var c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+    }
+    return null;
+}
+
+function eraseCookie(name) {
+    document.cookie = name +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+}
+
+DarkReader.auto({
+    brightness: 100,
+    contrast: 100
+})
+
+if(getCookie('darkmode') === 'False') {
+    DarkReader.disable();
+}
+
 window.addEventListener('load', (e) => {
+    const darkModeSwitch = document.getElementById('is-darkmode')
+
+    darkModeSwitch.addEventListener('change', (e) => {
+        if(darkModeSwitch.checked) DarkReader.enable();
+        else DarkReader.disable();
+
+        setCookie('darkmode', DarkReader.isEnabled() ? 'True' : 'False', 365)
+
+        const fsDarkModeQuery = document.querySelectorAll('.fs-darkmode');
+
+        fsDarkModeQuery.forEach((obj) => {
+            obj.style.filter = `invert(${DarkReader.isEnabled() ? '100%' : '0%'})`
+        });
+
+    });
+
+    MEvent.addEventHandler('LocationChangeEvent', () => {
+        const fsDarkModeQuery = document.querySelectorAll('.fs-darkmode');
+
+        fsDarkModeQuery.forEach((obj) => {
+            obj.style.filter = `invert(${DarkReader.isEnabled() ? '100%' : '0%'})`
+        });
+    });
+
     const forms = document.querySelectorAll('.needs-validation');
     const flashContainer = document.getElementById('flashes-container');
 

@@ -63,7 +63,7 @@ LocationChangeEvent.addEventHandler((_tree) => {
     container.innerHTML = '';
 
     if(_tree !== tree) {
-        let parent = new Directory('../');
+        let parent = new MDirectory('../');
         let div = parent.getDiv();
         div.setAttribute('data-type', 'parent');
 
@@ -191,3 +191,16 @@ window.addEventListener('load', () => {
 
     contextMenu.import();
 });
+
+let socket = io();
+
+socket.on('connect', () => {
+    socket.emit('join', {data: 'hello'})
+})
+
+socket.on('somethingidk', (data) => console.log(data));
+
+socket.on('upload_status_update', function (data) {
+    data = data['data'];
+    console.log(data['name'], data['size'], data['handled'], data['handled'] / data['size']);
+})

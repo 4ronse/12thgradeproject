@@ -28,9 +28,14 @@
 
   <script src="/static/js/jquery.min.js"></script>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+
+  <script src="https://unpkg.com/darkreader@4.9.33/darkreader.js"></script>
+
   <script src="/static/js/MEvent.js"></script>
   <script src="/static/js/ContextMenu.js"></script>
   <script src="/static/js/main.js"></script>
+
 
   {% block headimports %} {% endblock %}
 </head>
@@ -71,6 +76,15 @@
                 <a class="btn btn-outline-dark my-2" role="button" href="{{ url_for('auth.profile') }}"> Profile
                   Settings
                 </a>
+              </div>
+            </li>
+            <li>
+              <hr class="dropdown-divider">
+            </li>
+            <li>
+              <div class="m-auto w-100 text-center">
+                <span>Dark Mode: </span>
+                <input type="checkbox" id="is-darkmode" {{ 'checked' if request.cookies.get('darkmode', 'False') == 'True' else '' }}>
               </div>
             </li>
             <li>

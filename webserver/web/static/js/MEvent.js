@@ -3,7 +3,9 @@ class MEvent {
 
     constructor(name) {
         this.name = name;
-        MEvent.#handlers[name] = [];
+
+        if(!MEvent.#handlers.hasOwnProperty(name))
+            MEvent.#handlers[name] = []
     }
 
     addEventHandler = handler => {
@@ -15,8 +17,10 @@ class MEvent {
     }
 
     static addEventHandler = (name, handler) => {
-        if(MEvent.#handlers.hasOwnProperty(name))
-            MEvent.#handlers[name].push(handler);
+        if(!MEvent.#handlers.hasOwnProperty(name))
+            MEvent.#handlers[name] = []
+
+        MEvent.#handlers[name].push(handler);
     }
 
     static dispatch = (name, d) => {
@@ -24,5 +28,9 @@ class MEvent {
             MEvent.#handlers[name].forEach(handler =>{
                 handler(d);
             });
+    }
+
+    static allHandlers = () => {
+        return MEvent.#handlers
     }
 }

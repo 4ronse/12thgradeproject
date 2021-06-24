@@ -144,6 +144,7 @@ class FSEntry {
         span.style.overflow = 'hidden';
         span.style.textOverflow = 'ellipsis';
 
+        image.classList.add('fs-darkmode')
         image.alt = 'FileIcon';
 
         image.src = this.image;
@@ -174,7 +175,7 @@ class FSEntry {
     }
 }
 
-class Directory extends FSEntry {
+class MDirectory extends FSEntry {
     constructor(name, children = [], parent = null) {
         super(name, parent, '/static/img/ico/directory.svg');
         this.children = children;
@@ -196,7 +197,7 @@ class Directory extends FSEntry {
     }
 
     toString() {
-        return `Directory[name: ${this.name}; children: ${this.children.length}]`
+        return `MDirectory[name: ${this.name}; children: ${this.children.length}]`
     }
 
     get isDirectory() {
@@ -220,7 +221,7 @@ Object.defineProperty(Directory.prototype, "[]", {
 })
  */
 
-class File extends FSEntry {
+class MFile extends FSEntry {
 
     constructor(name, parent) {
         super(name, parent);
@@ -250,7 +251,7 @@ class File extends FSEntry {
     }
 
     toString() {
-        return `File[name: ${this.name}; path: ${this.getFullPath()}]`
+        return `MFile[name: ${this.name}; path: ${this.getFullPath()}]`
     }
 
     get extension() {
@@ -266,11 +267,11 @@ class File extends FSEntry {
 }
 
 function makeFS(json, i = 0) {
-    let root = new Directory(json['name']);
+    let root = new MDirectory(json['name']);
 
     json.children.forEach(child => {
         if (child.hasOwnProperty('name')) root.addChild(makeFS(child, i + 1));
-        else root.addChild(new File(child, root));
+        else root.addChild(new MFile(child, root));
     });
 
     return root;

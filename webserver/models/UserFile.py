@@ -13,4 +13,4 @@ class UserFile(BaseUserRelatedModel):
     key = db.Column(db.String, nullable=False)
     salt = db.Column(db.String, nullable=False)
     real_name = db.Column(db.String, nullable=False, unique=True)
-    hashed_name = db.Column(db.String(256), nullable=False, unique=True)
+    hashed_name = db.Column(db.String(256), nullable=False)

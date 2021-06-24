@@ -16,7 +16,10 @@ class ContextMenuItem {
         this.#i = i;
         this.#span = span;
 
-        div.classList.add('context-menu-item');
+        div.classList.add('context-menu-item', 'row', 'm-0', 'px-0', 'py-1', 'align-self-center');
+        i.classList.add('col-1', 'my-auto');
+        span.classList.add('col-10', 'my-auto');
+
         div.append(i, span);
 
         this.setText(data['text']);

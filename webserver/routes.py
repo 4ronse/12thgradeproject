@@ -1,5 +1,7 @@
 import os
 import re
+import threading
+import time
 import uuid
 
 import pyqrcode
@@ -7,7 +9,7 @@ import pyqrcode
 from io import BytesIO
 from functools import wraps
 from flask import Blueprint, request, render_template, redirect, url_for, flash, session, abort, Response, \
-    stream_with_context
+    stream_with_context, has_app_context, copy_current_request_context, make_response
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_mail import Message
 from sqlalchemy.exc import StatementError
@@ -32,9 +34,9 @@ storage = Blueprint('storage', __name__, static_folder="web/static")
 #     UTILS     #
 #               #
 #################
-def mkdirs(p: Path):
+def mk_dirs(p: Path):
     if p.parent and not p.parent.exists():
-        mkdirs(p.parent)
+        mk_dirs(p.parent)
     p.mkdir(exist_ok=True)
 
 
@@ -64,6 +66,26 @@ def login_pointless(func, view='view.index'):
             flash('You are already signed in.', 'warn')
             return redirect(url_for(view), 302)
         return func(*args, **kwargs)
+
+    return decorator
+
+
+def temporarily_disabled(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        return 
+
+
+def time_me(func):
+    @wraps(func)
+    def decorator(*args, **kwargs):
+        start = time.time()
+        res = func(*args, **kwargs)
+        end = time.time()
+
+        print(f'Execution of {func.__name__} took {end - start}s')
+
+        return res
 
     return decorator
 
@@ -409,11 +431,34 @@ def make_tree(path):
     return tree
 
 
+class AppContextThread(threading.Thread):
+    """Implements Thread with flask AppContext."""
+
+    def __init__(self, *args, **kwargs):
+        from flask import _app_ctx_stack
+        super().__init__(*args, **kwargs)
+        if not has_app_context():
+            raise RuntimeError('Running outside of Flask AppContext.')
+        self.app_ctx = _app_ctx_stack.top
+
+    def run(self):
+        try:
+            self.app_ctx.push()
+            super().run()
+        finally:
+            self.app_ctx.pop()
+
+
+@time_me
 def get_user_file_tree_own(user: User):
     user_files: list[UserFile] = UserFile.query.filter_by(owner=user.id).all()
     root = dict(name='/', children=[])
 
-    for file in user_files:
+    # from time import time
+    # now = time()
+
+    @copy_current_request_context
+    def target(file):
         fernet = get_fernet(session['my_key'])
         fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))
         fernet = get_fernet(get_encryption_key(fernet.decrypt(file.key), file.salt))
@@ -437,6 +482,33 @@ def get_user_file_tree_own(user: User):
             ptr = n
             fn = fn[1:]
         ptr['children'].append(fn[0])
+
+    threaded = True
+
+    if threaded:
+        threads = []
+        for f in user_files:
+            t = AppContextThread(target=target, args=(f,))
+            t.start()
+            threads.append(t)
+
+        for t in threads:
+            t.join()
+    else:
+        for f in user_files:
+            target(f)
+
+    def count_files_temp(r):
+        c = 0
+        for i in r['children']:
+            if type(i) == dict:
+                c += count_files_temp(i)
+            else:
+                c += 1
+
+        return c
+
+    print('Number of files: ' + str(count_files_temp(root)))
 
     return root
 
@@ -486,10 +558,17 @@ def index():
 @view.route('/upload', methods=['POST'])
 @login_required
 def upload():
-    from . import app
+    from . import app, socketio
     from hashlib import sha256
 
     files = request.files.getlist('file')
+
+    for file in files:
+        file: FileStorage
+        hashed_name = sha256(file.filename.encode()).hexdigest()
+        userfile: UserFile = UserFile.query.filter_by(owner=current_user.id, hashed_name=hashed_name).first()
+        if userfile:
+            return Response('File exists already!', status=400, mimetype='text/plain')
 
     for file in files:
         file: FileStorage
@@ -511,12 +590,29 @@ def upload():
 
         path: Path = current_user.folder / ('%.32x' % userfile.id.int)
         relative_path = path.relative_to(Path(app.config['UPLOAD_PATH']) / f'{current_user.id}')
-        mkdirs(path.parent)
+        mk_dirs(path.parent)
         userfile.relative_to_upload_dir_path = fernet.encrypt(str(relative_path).encode())
+        file.stream.seek(0)
+        size = file.seek(0, os.SEEK_END)
+        file.stream.seek(0)
+        handled = 0
+        last_sent = 0
 
         with path.open('wb') as local_file:
             while chunk := file.stream.read(8096 * 16):
                 local_file.write(fernet.encrypt(chunk))
+                handled += 8096 * 16
+                handled = size if handled > size else handled
+
+                if time.time() - last_sent >= 0.3 or handled == size:
+                    last_sent = time.time()
+                    socketio.emit('upload_status_update', {
+                        'data': {
+                            'name': file.filename,
+                            'size': size,
+                            'handled': handled
+                        }
+                    }, to=str(current_user.id))
 
         db.session.add(userfile)
     db.session.commit()
@@ -634,7 +730,7 @@ def download_post():
     for file_name in file_names:
         files.append(UserFile.query.filter_by(owner=current_user.id, hashed_name=file_name).first())
 
-    mkdirs(zip_path.parent)
+    mk_dirs(zip_path.parent)
 
     with zipfile.ZipFile(str(zip_path.absolute()), 'w') as zf:
         while len(files) > 0 and (file := files.pop()):
@@ -728,9 +824,3 @@ def add_header(response: Response):
     response.cache_control.max_age = 0
     response.cache_control.no_store = True
     return response
-
-#################
-#               #
-#    STORAGE    #
-#               #
-#################

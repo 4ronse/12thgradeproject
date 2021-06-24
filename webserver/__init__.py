@@ -1,7 +1,11 @@
+from typing import Union
+
 from flask import Flask, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
+from flask_session import Session
+from flask_socketio import SocketIO
 
 from .config import Config
 
@@ -9,21 +13,29 @@ from pathlib import Path
 
 db = SQLAlchemy()
 mail = Mail()
+socketio = SocketIO(manage_session=False)
 app: Flask = None
 
 
-def create_app() -> Flask:
+def create_app(*args, **kwargs):
     """ Creates Flask object """
     global app
+
+    webserver_folder = Path(__file__).parent
+    cert_path = webserver_folder / 'cert.pem'
+    key_path = webserver_folder / 'key.pem'
+    ssl_context = (str(cert_path.absolute()), str(key_path.absolute()))
 
     app = Flask(__name__,
                 static_folder="web/static",
                 template_folder="web/templates")
 
+    app.config['SESSION_TYPE'] = 'filesystem'
+
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.sqlite'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
-    app.config['DEBUG'] = Config.DEBUG
+    app.debug = Config.DEBUG
     app.config['SECRET_KEY'] = Config.SECRET_KEY
     app.config['PROJECT_NAME'] = Config.PROJECT_NAME
     app.config['DEFAULT_PROFILE_PICTURE'] = Config.DEFAULT_PROFILE_PICTURE
@@ -50,6 +62,8 @@ def create_app() -> Flask:
 
     db.init_app(app)
     mail.init_app(app)
+    Session(app)
+    socketio.init_app(app)
 
     login_manager = LoginManager()
     login_manager.login_view = 'auth.login'
@@ -58,7 +72,7 @@ def create_app() -> Flask:
     from .models.User import User
 
     @login_manager.user_loader
-    def load_user(user_id):
+    def load_user(user_id) -> User:
         return User.query.get(user_id)
 
     from .routes import view as view_blueprint
@@ -69,9 +83,7 @@ def create_app() -> Flask:
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(storage_blueprint)
 
-    return app
+    from . import wsroutes
 
-
-if __name__ == '__main__':
-    create_app()
-    app.run(host='0.0.0.0', port=8080, debug=1)
+    socketio.run(app, debug=True, ssl_context=ssl_context, *args, **kwargs)
+    # return lambda *args, **kwargs: smart_ass(*args, **kwargs)
