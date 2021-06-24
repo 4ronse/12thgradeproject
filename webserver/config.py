@@ -15,6 +15,10 @@ class Config:
     NO_SSL = getenv('NO_SSL') or True
     DEFAULT_PROFILE_PICTURE = getenv('DEFAULT_PROFILE_PICTURE')
 
+    HOST = getenv('HOST') or '0.0.0.0'
+    PORT_SSL = getenv('PORT_SSL') or 443
+    PORT_NO_SSL = getenv('PORT_NO_SSL') or 80
+
     MAIL_SERVER = getenv('MAIL_SERVER')
     MAIL_PORT = getenv('MAIL_PORT')
     MAIL_USE_SSL = getenv('MAIL_USE_SSL')

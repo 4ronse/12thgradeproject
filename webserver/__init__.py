@@ -17,15 +17,9 @@ socketio = SocketIO(manage_session=False)
 app: Flask = None
 
 
-def create_app(*args, **kwargs):
+def create_app():
     """ Creates Flask object """
     global app
-
-    webserver_folder = Path(__file__).parent
-    cert_path = webserver_folder / 'cert.pem'
-    key_path = webserver_folder / 'key.pem'
-    ssl_context = (str(cert_path.absolute()), str(key_path.absolute()))
-
     app = Flask(__name__,
                 static_folder="web/static",
                 template_folder="web/templates")
@@ -85,5 +79,5 @@ def create_app(*args, **kwargs):
 
     from . import wsroutes
 
-    socketio.run(app, debug=True, ssl_context=ssl_context, *args, **kwargs)
+    return app
     # return lambda *args, **kwargs: smart_ass(*args, **kwargs)

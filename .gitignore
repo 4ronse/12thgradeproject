@@ -23,7 +23,6 @@ wheels/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
-flask_session/
 .installed.cfg
 *.egg
 MANIFEST
@@ -138,3 +137,5 @@ dmypy.json
 # Custom
 webserver/database.sqlite
 webserver/web/uploads/
+webserver/web/temp/
+flask_session/
