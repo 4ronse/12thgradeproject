@@ -23,41 +23,6 @@ function load_tree() {
         }).catch((e) => console.error(e));
 }
 
-const singleClickHandler = (e) => {
-    const target = e.currentTarget;
-
-    if(e.ctrlKey) {
-        if(target.classList.contains('selected')) target.classList.remove('selected');
-        else target.classList.add('selected');
-    } else {
-        const allSelected = document.querySelectorAll('.selected');
-
-        allSelected.forEach(selected => {
-            selected.classList.remove('selected');
-        });
-
-        target.classList.add('selected');
-    }
-};
-
-const doubleClickHandler = (e) => {
-    e.preventDefault();
-    const target = e.currentTarget;
-
-    if (target.getAttribute('data-type') === 'file') {
-        let link = document.createElement('a');
-        link.download = target.getAttribute('data-name');
-        link.href = `/download/${target.getAttribute('data-hashed-file-name')}`;
-        link.click();
-    } else if(target.getAttribute('data-type') === 'directory') {
-        current = current.get(target.getAttribute('data-name'));
-        LocationChangeEvent.dispatch(current);
-    } else if(target.getAttribute('data-type') === 'parent') {
-        current = current.parent;
-        LocationChangeEvent.dispatch(current);
-    }
-}
-
 LocationChangeEvent.addEventHandler((_tree) => {
     const container = document.getElementById('file-dropzone');
     container.innerHTML = '';
@@ -156,6 +121,37 @@ const download = () => {
     return files;
 }
 
+const singleClickHandler = (e) => {
+    const target = e.currentTarget;
+
+    if(e.ctrlKey) {
+        if(target.classList.contains('selected')) target.classList.remove('selected');
+        else target.classList.add('selected');
+    } else {
+        const allSelected = document.querySelectorAll('.selected');
+
+        allSelected.forEach(selected => {
+            selected.classList.remove('selected');
+        });
+
+        target.classList.add('selected');
+    }
+};
+
+const doubleClickHandler = (e) => {
+    e.preventDefault();
+    const target = e.currentTarget;
+
+    if (target.getAttribute('data-type') === 'file') {
+        download();
+    } else if(target.getAttribute('data-type') === 'directory') {
+        current = current.get(target.getAttribute('data-name'));
+        LocationChangeEvent.dispatch(current);
+    } else if(target.getAttribute('data-type') === 'parent') {
+        current = current.parent;
+        LocationChangeEvent.dispatch(current);
+    }
+}
 
 window.addEventListener('load', () => {
     load_tree();
@@ -192,6 +188,24 @@ window.addEventListener('load', () => {
     contextMenu.import();
 });
 
+LocationChangeEvent.addEventHandler((n) => {
+    if(n.children.length == 0 && n.name === '/') {
+        const dropzone = document.getElementById('file-dropzone');
+
+        dropzone.innerHTML = `
+        <div id="no-files">
+            <div style="width: 100%; text-align: center;">
+                <span style="font-size: 1.5rem; overflow: auto">
+                Hello there! <br>
+                As you most likely have noticed, your crate is currently empty. <br>
+                You could start uploading your files by just dargging and droping them right here :)
+                </span>
+            </div>
+        </div>
+        `;
+    }
+});
+
 let socket = io();
 
 socket.on('connect', () => {
@@ -203,4 +217,10 @@ socket.on('somethingidk', (data) => console.log(data));
 socket.on('upload_status_update', function (data) {
     data = data['data'];
     console.log(data['name'], data['size'], data['handled'], data['handled'] / data['size']);
+
+    if (data['handled']  === data['size']) {
+        let f = new MFile(data['name'], current);
+        current.children.push(f);
+        LocationChangeEvent.dispatch(current);
+    }
 })

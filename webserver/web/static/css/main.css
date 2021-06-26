@@ -13,7 +13,27 @@ body {
     min-height: 400px;
 }
 
-{}
+#dropzone-modal {
+    position: fixed;
+    display: flex;
+    top: 0;
+    left: 0;
+
+    background-color: rgba(19, 19, 19, 80%);
+    color: #fff;
+
+    height: 100%;
+    width: 100%;
+
+    text-align: center;
+    align-items: center;
+
+    pointer-events: none;
+}
+
+#dropzone-modal > * {
+    margin: auto;
+}
 
 .card {
     color: #212529;

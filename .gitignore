@@ -139,3 +139,6 @@ webserver/database.sqlite
 webserver/web/uploads/
 webserver/web/temp/
 flask_session/
+
+ignoreme.html
+ignore.py
