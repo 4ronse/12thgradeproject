@@ -2,6 +2,7 @@ import os
 import re
 import threading
 import time
+from typing import Union
 import uuid
 
 import pyqrcode
@@ -35,6 +36,19 @@ storage = Blueprint('storage', __name__, static_folder="web/static")
 #               #
 #################
 def mk_dirs(p: Path):
+    """
+    A recursive method that creatas all parent
+    dirs and requested dir if they do not exist
+
+    Example:
+        mk_dirs(Path('.') / 'temp' / 'userid')
+    
+    Parameters:
+        p: The root dir
+    
+    Types:
+        p: Path
+    """
     if p.parent and not p.parent.exists():
         mk_dirs(p.parent)
     p.mkdir(exist_ok=True)
@@ -71,12 +85,45 @@ def login_pointless(func, view='view.index'):
 
 
 def temporarily_disabled(f):
+    """
+    Methods decorated with this decorator will return
+    nothing, although their code will run.
+    
+    Example:
+        @temporarily_disabled
+        @app.route('/login')
+        @login_pointless('main.login')
+        def login():
+            login_logic()
+    
+    Parameters:
+        f: The view function to decorate
+    
+    Types:
+        f: function
+    """
     @wraps(f)
     def decorator(*args, **kwargs):
-        return 
+        return
+    return decorator
 
 
 def time_me(func):
+    """
+    Methods decorated with this decorator will be executed
+    and timed. Execution time will be printed to stdout.
+
+    Example:
+        @time_me
+        def decrypt():
+            decryption_logic()
+    
+    Parameters:
+        func: The view function to decorate
+    
+    Types:
+        func: function
+    """
     @wraps(func)
     def decorator(*args, **kwargs):
         start = time.time()
@@ -360,7 +407,7 @@ def reset_request():
 @login_pointless
 def reset(token):
     try:
-        prr: [PasswordResetRequest, None] = PasswordResetRequest.query.filter_by(
+        prr: Union[PasswordResetRequest, None] = PasswordResetRequest.query.filter_by(
             id=token).order_by(PasswordResetRequest.created_at.desc()).first()
     except StatementError:
         prr = None
@@ -415,22 +462,6 @@ def test_getkey():
 #     VIEWS     #
 #               #
 #################
-def make_tree(path):
-    tree = dict(name=path, children=[])
-    try:
-        lst = os.listdir(path)
-    except OSError:
-        pass  # ignore errors
-    else:
-        for name in lst:
-            fn = os.path.join(path, name)
-            if os.path.isdir(fn):
-                tree['children'].append(make_tree(fn))
-            else:
-                tree['children'].append(dict(name=fn))
-    return tree
-
-
 class AppContextThread(threading.Thread):
     """Implements Thread with flask AppContext."""
 
@@ -451,6 +482,8 @@ class AppContextThread(threading.Thread):
 
 @time_me
 def get_user_file_tree_own(user: User):
+    """ Generates a file tree of user """
+
     user_files: list[UserFile] = UserFile.query.filter_by(owner=user.id).all()
     root = dict(name='/', children=[])
 
@@ -459,10 +492,10 @@ def get_user_file_tree_own(user: User):
 
     @copy_current_request_context
     def target(file):
-        fernet = get_fernet(session['my_key'])
-        fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))
-        fernet = get_fernet(get_encryption_key(fernet.decrypt(file.key), file.salt))
-        fn = fernet.decrypt(file.real_name).decode().split('/')
+        fernet = get_fernet(session['my_key'])  # Get PBKDF2 from password key
+        fernet = get_fernet(fernet.decrypt(current_user.file_encryption_key))  # Decrypt and get PBKDF2 File decryiption key 
+        fernet = get_fernet(get_encryption_key(fernet.decrypt(file.key), file.salt))  # Decrypt File's private PBKDF2 material and create a PBKDF2 key from it 
+        fn = fernet.decrypt(file.real_name).decode().split('/')  # Decrypt files real name
         ptr = root
 
         while len(fn) > 1:
@@ -483,7 +516,7 @@ def get_user_file_tree_own(user: User):
             fn = fn[1:]
         ptr['children'].append(fn[0])
 
-    threaded = True
+    threaded = True  # This section was modified for time testing purposes
 
     if threaded:
         threads = []
@@ -818,9 +851,10 @@ def _bruh():
 # NO CACHE due to development
 from . import app
 
-
+"""
 @app.after_request
 def add_header(response: Response):
     response.cache_control.max_age = 0
     response.cache_control.no_store = True
     return response
+"""
