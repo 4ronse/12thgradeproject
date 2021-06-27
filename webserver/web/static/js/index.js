@@ -219,8 +219,25 @@ socket.on('upload_status_update', function (data) {
     console.log(data['name'], data['size'], data['handled'], data['handled'] / data['size']);
 
     if (data['handled']  === data['size']) {
-        let f = new MFile(data['name'], current);
-        current.children.push(f);
+        let path = data['name'].split('/').reverse();
+        let cloc = current;
+        
+        while(path.length > 1) {
+            let name = path.pop();
+            let temp = cloc.get(name);
+            
+            if(temp === undefined || temp.isFile()) {
+                let dir = new MDirectory(name, [], cloc);
+                cloc.addChild(dir);
+            } else if (temp.isDirectory()) {
+                cloc = temp;
+                continue;
+            }
+        }
+        
+        
+        let f = new MFile(data['name'], cloc);
+        cloc.children.push(f);
         LocationChangeEvent.dispatch(current);
     }
-})
+});
