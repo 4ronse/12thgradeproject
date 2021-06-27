@@ -7,6 +7,10 @@ class ContextMenuItem {
     #_icon;
     #_onclick;
 
+    /**
+     * A Context menu item class
+     * @param {json} data File data 
+     */
     constructor(data) {
         let div = document.createElement('div');
         let i = document.createElement('i');
@@ -27,11 +31,19 @@ class ContextMenuItem {
         this.setOnClick(data['onclick']);
     }
 
+    /**
+     * Sets item's text
+     * @param {string} text 
+     */
     setText(text) {
         this.#_text = text;
         this.#span.innerText = text;
     }
 
+    /**
+     * Sets item's icon
+     * @param {json} icon from FAwesome {name: 'far-download', style: 'fa'}
+     */
     setIcon(icon) {
         if (this.#_icon !== undefined) {
             Object.entries(this.#_icon).forEach(([k, v]) => {
@@ -43,6 +55,10 @@ class ContextMenuItem {
         this.#i.classList.add(icon['name'], icon['style']);
     }
 
+    /**
+     * Set item click callback
+     * @param {function} onclick 
+     */
     setOnClick(onclick) {
         if (this.#_onclick !== undefined) {
             this.#self.removeEventListener('click', this.#_onclick);
@@ -52,6 +68,10 @@ class ContextMenuItem {
         this.#self.addEventListener('click', onclick);
     }
 
+    /**
+     * Create item div
+     * @returns {DOMElement}
+     */
     get div() {
         return this.#self;
     }
@@ -65,6 +85,12 @@ class ContextMenu {
     #attach;
     #active;
 
+    /**
+     * A Context menu class
+     * @param {number} priority Context menu's priority
+     * @param {list} items List of ContextMenuItem(s)
+     * @param {DOMElement} attach DOM element to attach Context Menu to
+     */
     constructor(priority = 0, items = [], attach = document) {
         let div = document.createElement('div');
         div.id = 'context-menu';
@@ -80,6 +106,10 @@ class ContextMenu {
         // ContextMenu.#menus.push(this);
     }
 
+    /**
+     * Adds item to context menu
+     * @param {ContextMenuItem} item 
+     */
     addItem(item) {
         this.#self.appendChild(item.div);
     }
@@ -118,18 +148,33 @@ class ContextMenu {
         document.body.appendChild(this.#self);
     }
 
+    /**
+     * Hides context menu
+     */
     hide() {
         this.#self.classList.remove('active');
     }
 
+    /**
+     * Check wether or not the context menu is active
+     * @returns {boolean}
+     */
     get isActive() {
         return this.#active;
     }
 
+    /**
+     * Create div to put in HTML
+     * @returns {DOMElement}
+     */
     get div() {
         return this.#self;
     }
 
+    /**
+     * Returns a list of context menu's items 
+     * @returns {ContextMenuItem}
+     */
     get items() {
         return this.#items;
     }

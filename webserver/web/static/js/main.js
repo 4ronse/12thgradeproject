@@ -2,11 +2,23 @@
 
 let flash_before_load = [];
 
+/**
+ * Puts up a flash message to screen
+ * @param {string} msg 
+ * @param {string} t 
+ * @param {number} time 
+ */
 let flash = (msg, t, time = -1) => {
     console.log('Page is yet to be initiated');
     flash_before_load.push([msg, t, time]);
 };
 
+/**
+ * Set cookie value
+ * @param {string} name 
+ * @param {*} value 
+ * @param {number} days 
+ */
 function setCookie(name,value,days) {
     var expires = "";
     if (days) {
@@ -17,6 +29,11 @@ function setCookie(name,value,days) {
     document.cookie = name + "=" + (value || "")  + expires + "; path=/";
 }
 
+/**
+ * Returns cookie if set, otherwise returns null
+ * @param {*} name Cookie's name
+ * @returns {(string | null)} Cookie's value
+ */
 function getCookie(name) {
     var nameEQ = name + "=";
     var ca = document.cookie.split(';');
@@ -28,6 +45,11 @@ function getCookie(name) {
     return null;
 }
 
+
+/**
+ * Delete a cookie
+ * @param {string} name Cookie name
+ */
 function eraseCookie(name) {
     document.cookie = name +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
 }
@@ -52,6 +74,7 @@ window.addEventListener('load', (e) => {
 
             const fsDarkModeQuery = document.querySelectorAll('.fs-darkmode');
 
+            // Set dark theme for all objects
             fsDarkModeQuery.forEach((obj) => {
                 obj.style.filter = `invert(${DarkReader.isEnabled() ? '100%' : '0%'})`
             });
@@ -80,6 +103,10 @@ window.addEventListener('load', (e) => {
         }, false);
     });
 
+    /**
+     * Re-declaration
+     * {@link flash}
+     */
     flash = (msg, t, time = -1) => {
         let div = document.createElement('div');
         div.classList.add('alert', `alert-${t}`, 'alert-dismissible', 'fade', 'show', 'm-4');
@@ -93,14 +120,29 @@ window.addEventListener('load', (e) => {
         if(time > 0) setTimeout(()=>{ $(div).alert('close'); }, time)
     };
 
+    // When window is loaded, the browser will cause the queued flashes
+    // to pop up.
     flash_before_load.forEach((f) => {flash(f[0], f[1], f[2])});
 
+    /**
+     * To be honest, I have absolutly NO idea why I
+     * put this section in scopes, probably was around
+     * the time when I discovered that you can make scopes
+     * like this.
+     * 
+     * Maybe so the code would not be editable trough console, but like...
+     * ¯\_(ツ)_/¯
+     */
     {
         const dropzone = document.getElementById('file-dropzone');
         const dropzoneModal = document.getElementById('dropzone-modal');
 
         if(dropzone != null) {
 
+            /**
+             * Function will prevent the default behavior of drag events
+             * @param {*} e Event (I believe?)
+             */
             let preventDefault = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -117,15 +159,15 @@ window.addEventListener('load', (e) => {
                 });
 
                 xhr.addEventListener("readystatechange", (e) => {
-                    if(xhr.readyState === 4 && xhr.status === 201) console.log("Done!");
+                    if(xhr.readyState === 4 && xhr.status === 201) console.log("Done!"); // 4 = done, 201 = HTTP Created
                     else if(xhr.readyState === 4 && xhr.status !== 201) console.error(e, xhr);
                 });
 
                 xhr.addEventListener("error", (e) => console.log(e))
 
-                file.file((f) => {
+                file.file((f) => { // Create file object
                     console.log(f, file)
-                    formData.append('file', f, file.fullPath.substr(1));
+                    formData.append('file', f, file.fullPath.substr(1)); // Append file to form data
                     xhr.send(formData);
                 });
 
@@ -143,13 +185,13 @@ window.addEventListener('load', (e) => {
             }
 
             let onDragOver = (e) => {
-                preventDefault(e);
-                dropzoneModal.style.display = 'flex';
+                preventDefault(e); // To prevent default
+                dropzoneModal.style.display = 'flex'; // To show dropzone modal
             }
 
             let onDragLeave = (e) => {
-                preventDefault(e);
-                dropzoneModal.style.display = 'none';
+                preventDefault(e); // To prevent default
+                dropzoneModal.style.display = 'none'; // To hide dropzone modal
             }
 
             dropzone.ondragenter = onDragOver;
@@ -159,7 +201,7 @@ window.addEventListener('load', (e) => {
             dropzone.ondrop = (e) => {
                 onDragLeave(e);
 
-                [...e.dataTransfer.items].forEach((item) => {
+                [...e.dataTransfer.items].forEach((item) => {  // Iterate over each item
                     item = item.webkitGetAsEntry();
                     console.log(item)
                     if(item.isFile) upload(item);

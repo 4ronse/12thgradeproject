@@ -1,3 +1,9 @@
+/**
+ * Hashes value
+ * thanks stackoverflow :)
+ * @param {string} s Text to hash 
+ * @returns {string} SHA256 HEX-Digest
+ */
 function SHA256(s) {
     var chrsz = 8;
     var hexcase = 0;
@@ -116,12 +122,23 @@ function SHA256(s) {
 }
 
 class FSEntry {
+    /**
+     * FSEntry is a parent class to all of my FileSystem's
+     * entries
+     * @param {string} name Entry name
+     * @param {FSEntry} parent well..
+     * @param {string} image Image URL
+     */
     constructor(name, parent, image) {
         this.name = name;
         this.parent = parent;
         this.image = image;
     }
 
+    /**
+     * Returns a div to put in HTML
+     * @returns {DOMElement} div
+     */
     getDiv() {
         let container = document.createElement('div');
         let card = document.createElement('div');
@@ -166,22 +183,41 @@ class FSEntry {
         return container;
     }
 
+    /**
+     * Returns wether or not the entry is a file
+     * @returns {boolean}
+     */
     get isFile() {
         return false;
     }
 
+    /**
+     * Returns wether or not the entry is a directory
+     * @returns {boolean}
+     */
     get isDirectory() {
         return false;
     }
 }
 
 class MDirectory extends FSEntry {
+    /**
+     * MDirectory
+     * @param {string} name directory name
+     * @param {Array} children children of directory
+     * @param {FSEntry} parent parent object 
+     */
     constructor(name, children = [], parent = null) {
         super(name, parent, '/static/img/ico/directory.svg');
         this.children = children;
         children.forEach((child) => this.addChild(child));
     }
 
+    /**
+     * Get child
+     * @param {string} what Child's name 
+     * @returns {FSEntry | undefined}
+     */
     get(what) {
         for (let i = 0; i < this.children.length; i++) {
             const child = this.children[i];
@@ -191,6 +227,10 @@ class MDirectory extends FSEntry {
         return undefined;
     }
 
+    /**
+     * Add child object
+     * @param {FSEntry} child 
+     */
     addChild(child) {
         child.parent = this;
         this.children.push(child);
@@ -223,11 +263,20 @@ Object.defineProperty(Directory.prototype, "[]", {
 
 class MFile extends FSEntry {
 
+    /**
+     * MFile
+     * @param {string} name 
+     * @param {MDirectory} parent 
+     */
     constructor(name, parent) {
         super(name, parent);
         this.image = `/static/img/ico/${this.extension}.svg`;
     }
 
+    /**
+     * Get file's path
+     * @returns {string} Path
+     */
     getFullPath() {
         let path = '';
         let ptr = this.parent;
@@ -240,6 +289,9 @@ class MFile extends FSEntry {
         return (path + `${this.name}`).substr(2);
     }
 
+    /**
+     * @returns {string} SHA256 hash of file
+     */
     get SHA256() {
         return SHA256(this.getFullPath());
     }
@@ -254,6 +306,9 @@ class MFile extends FSEntry {
         return `MFile[name: ${this.name}; path: ${this.getFullPath()}]`
     }
 
+    /**
+     * @return {string}
+     */
     get extension() {
         if (this.name.indexOf('.') === -1) return 'bin';
         let splitName = this.name.split('.');
